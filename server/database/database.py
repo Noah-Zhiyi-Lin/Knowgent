@@ -98,8 +98,9 @@ class Database:
                 id INTEGER PRIMARY KEY,
                 notebook_name TEXT NOT NULL UNIQUE,
                 notebook_path TEXT NOT NULL UNIQUE,
-                created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                description TEXT NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """
         # Create table of notes, notebook_id is a foreign key
@@ -109,8 +110,8 @@ class Database:
                 title TEXT NOT NULL UNIQUE,
                 file_path TEXT NOT NULL UNIQUE,
                 notebook_id INTEGER NOT NULL,
-                created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (notebook_id) REFERENCES notebooks (id) ON DELETE CASCADE
             )
         """
