@@ -29,17 +29,22 @@ class KnowgentGUI:
         self.editor_frame = ttk.Frame(self.paned_window)
         self.paned_window.add(self.editor_frame)
 
-        # 创建工具栏
-        self.toolbar = ttk.Frame(self.editor_frame)
-        self.toolbar.pack(fill=tk.X)
-        
-        # 添加Markdown切换按钮
+        # 创建编辑器顶部框架（用于放置按钮）
+        self.editor_top_frame = ttk.Frame(self.editor_frame)
+        self.editor_top_frame.pack(fill=tk.X)
+
+        # 创建一个空的填充框架，将按钮推到右边
+        self.spacer = ttk.Frame(self.editor_top_frame)
+        self.spacer.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # 添加Markdown预览按钮（放在右上角）
         self.markdown_button = ttk.Button(
-            self.toolbar, 
-            text="Enable Markdown Preview", 
+            self.editor_top_frame, 
+            text="Preview",
+            width=8,  # 设置固定宽度
             command=self.toggle_markdown_preview
         )
-        self.markdown_button.pack(side=tk.LEFT, padx=5, pady=2)
+        self.markdown_button.pack(side=tk.RIGHT, padx=5, pady=2)
 
         # 创建文本编辑区
         self.text_area = tk.Text(self.editor_frame)
@@ -55,6 +60,7 @@ class KnowgentGUI:
         
         # 创建文件浏览器
         self.create_file_browser()
+
 
     def create_file_browser(self):
         self.tree = ttk.Treeview(self.file_browser_frame)
@@ -73,12 +79,12 @@ class KnowgentGUI:
         
         if self.markdown_mode:
             # 启用预览模式
-            self.markdown_button.configure(text="Disable Markdown Preview")
+            self.markdown_button.configure(text="Hide")
             self.paned_window.add(self.preview_frame)  # 添加预览窗口
             self.update_preview()  # 更新预览内容
         else:
             # 禁用预览模式
-            self.markdown_button.configure(text="Enable Markdown Preview")
+            self.markdown_button.configure(text="Preview")
             self.paned_window.remove(self.preview_frame)  # 移除预览窗口
 
     def populate_tree(self, path):
