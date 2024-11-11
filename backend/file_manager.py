@@ -58,3 +58,23 @@ class FileManager:
 
     def is_file(self, path):
         return os.path.isfile(path)
+
+    def delete_file(self, file_path):
+        """删除文件或目录
+        
+        Args:
+            file_path (str): 要删除的文件或目录的完整路径
+            
+        Returns:
+            bool: 删除成功返回True，失败返回False
+            str: 错误信息（如果有）
+        """
+        try:
+            if os.path.isdir(file_path):
+                import shutil
+                shutil.rmtree(file_path)
+            else:
+                os.remove(file_path)
+            return True, None
+        except Exception as e:
+            return False, str(e)

@@ -3,7 +3,7 @@ from frontend.gui import KnowgentGUI
 
 def main():
     root = tk.Tk()
-    root.title("Knowgent v0.1.0")
+    root.title("Knowgent v0.2.2")
     root.geometry("1200x800")
     app = KnowgentGUI(root)
     root.mainloop()
