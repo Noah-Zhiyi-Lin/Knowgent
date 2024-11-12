@@ -1,6 +1,9 @@
 class NoteModel:
     def __init__(self, db):
-        # Database connection
+        """
+        Initialize the NoteModel with a connection to the database
+        :param db: connection to the database
+        """
         self.db = db
     def create_note(self, title, file_path, notebook_id):
         """
@@ -8,7 +11,7 @@ class NoteModel:
         :param title: title of the note
         :param file_path: path of the note
         :param notebook_id: ID of the notebook which the note belongs to
-        :return: None
+        :return: NULL
         """
         sql = """
         INSERT INTO notes (title, file_path, notebook_id)
@@ -17,17 +20,7 @@ class NoteModel:
         params = [title, file_path, notebook_id]
         self.db.execute(sql, params)
 
-    def get_note_by_title(self, title):
-        """
-        Retrieve a note's details by title
-        :param title: title of the note
-        :return: row of the note in database
-        """
-        sql = "SELECT * FROM notes WHERE title = ?"
-        self.db.execute(sql, [title])
-        return self.db.fetchone()
-
-    def get_id_by_title(self, title):
+    def get_note_id(self, title):
         """
         Retrieve a note's ID by title
         :param title: title of the note
@@ -37,14 +30,25 @@ class NoteModel:
         result = self.db.fetchone(sql, [title])
         return result["id"] if result else None
 
-    def update_note_by_title(self, title, new_title=None, new_path=None, new_notebook_id=None):
+    # Use get_note_id() before using following methods
+    def get_note(self, note_id):
         """
-        Update a note by current title
-        :param title: current title of the note
+        Retrieve a note's details by ID
+        :param note_id: ID of the note
+        :return: row of the note in database
+        """
+        sql = "SELECT * FROM notes WHERE id = ?"
+        self.db.execute(sql, [note_id])
+        return self.db.fetchone()
+
+    def update_note(self, note_id, new_title=None, new_path=None, new_notebook_id=None):
+        """
+        Update a note by ID
+        :param note_id: ID of the note
         :param new_title: new title of the note
         :param new_path: new path of the note
         :param new_notebook_id: new notebook id of the note
-        :return: None
+        :return: NULL
         """
         sql = "UPDATE notes SET"
         params = []
@@ -60,25 +64,25 @@ class NoteModel:
             sql += " notebook_id = ?,"
             params.append(new_notebook_id)
         # Set update time by CURRENT_TIMESTAMP
-        sql += " updated_at = CURRENT_TIMESTAMP WHERE title = ?"
-        params.append(title)
+        sql += " updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        params.append(note_id)
         # Execute update
         self.db.execute(sql, params)
 
-    def delete_note_by_title(self, title):
+    def delete_note(self, note_id):
         """
-        Delete a note by title
-        :param title: title of the note
-        :return: None
+        Delete a note by ID
+        :param note_id: ID of the note
+        :return: NULL
         """
-        sql = "DELETE FROM notes WHERE title = ?"
+        sql = "DELETE FROM notes WHERE id = ?"
         # Execute delete
-        self.db.execute(sql, [title])
+        self.db.execute(sql, [id])
 
     def get_all_notes(self):
         """
         Retrieve all notes
-        :return: rows of all notes in database
+        :return: List of all notes in database
         """
         sql = "SELECT * FROM notes"
         return self.db.fetchall(sql)

@@ -120,7 +120,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS tags (
                 id INTEGER PRIMARY KEY,
                 tag_name TEXT NOT NULL UNIQUE
-            ) 
+            )
         """
         # Create association table for notes and tags
         create_note_tags_table = """
