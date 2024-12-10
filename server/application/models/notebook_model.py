@@ -50,6 +50,7 @@ class NotebookModel:
         Retrieve a notebook's ID by its name
         :param notebook_name: name of the notebook
         :raises ValidationError: if the notebook name is empty
+        :raises NotebookNotFoundError: if the notebook dose not exist
         :raises DatabaseError: if database operation fails
         :return: ID of the notebook in database
         """
@@ -59,7 +60,9 @@ class NotebookModel:
         try:
             sql = "SELECT id FROM notebooks WHERE notebook_name = ?"
             result = self.db.fetchone(sql, [notebook_name])
-            return result["id"] if result else None
+            if result is None:
+                raise NotebookNotFoundError(f"Notebook with name {notebook_name} not found")
+            return result["id"]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get notebook ID: {str(e)}")
 
