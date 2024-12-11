@@ -214,4 +214,4 @@ class Database:
         except Exception:
             # Rollback if an error occurs
             self.rollback_transaction()
-            raise # Raise the errord
+            raise # Raise the error
