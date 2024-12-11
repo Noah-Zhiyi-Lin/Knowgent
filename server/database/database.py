@@ -1,6 +1,7 @@
 from pathlib import Path
 import sqlite3
 from contextlib import contextmanager
+from application.exceptions import DatabaseError
 
 class Database:
     def __init__(self):
@@ -24,7 +25,7 @@ class Database:
         Close the database
         """
         if not self.__connection:
-            raise ValueError("Database connection is not initialized")
+            raise DatabaseError("Database connection is not initialized")
         self.__connection.close()
 
     def commit(self):
@@ -32,7 +33,7 @@ class Database:
         Commit changes to the database
         """
         if not self.__connection:
-            raise ValueError("Database connection is not initialized")
+            raise DatabaseError("Database connection is not initialized")
         self.__connection.commit()
 
     def execute(self, sql, params=None):
@@ -43,7 +44,7 @@ class Database:
         :return: None
         """
         if not self.__cursor:
-            raise ValueError("Cursor is not initialized. Please check the database connection")
+            raise DatabaseError("Cursor is not initialized. Please check the database connection")
         if params is None:
             params = []
         # Execute the SQL statement
@@ -59,7 +60,7 @@ class Database:
         :return: the first row of the result, if nothing matches the sql statement, return None
         """
         if not self.__cursor:
-            raise ValueError("Cursor is not initialized. Please check the database connection")
+            raise DatabaseError("Cursor is not initialized. Please check the database connection")
         if params is None:
             params = []
         self.__cursor.execute(sql, params)
@@ -73,7 +74,7 @@ class Database:
         :return: a list of tuples and one row is one tuple
         """
         if not self.__cursor:
-            raise ValueError("Cursor is not initialized. Please check the database connection")
+            raise DatabaseError("Cursor is not initialized. Please check the database connection")
         if params is None:
             params = []
         self.__cursor.execute(sql, params)
@@ -202,9 +203,9 @@ class Database:
         """
         # Checking conditions before beginning a transaction
         if not self.__connection:
-            raise ValueError("Database connection is not initialized")
+            raise DatabaseError("Database connection is not initialized")
         if not self.__cursor:
-            raise ValueError("Cursor is not initialized. Please check the database connection")
+            raise DatabaseError("Cursor is not initialized. Please check the database connection")
         try:
             # Begin a transaction
             self.begin_transaction()

@@ -34,15 +34,18 @@ class NotebookModel:
             raise ValidationError("Notebook path cannot be None")
         # Try to create the notebook
         try:
-            sql = """
-            INSERT INTO notebooks (notebook_name, notebook_path, description)
-            VALUES (?, ?, ?)
-            """
-            params = [notebook_name, notebook_path, description]
-            self.db.execute(sql, params)
-        except sqlite3.IntegrityError:
-            raise DuplicateNotebookError(f"Note book with name {notebook_name} already exists")
-        except sqlite3.Error as e:
+            with self.db.transaction():
+                sql = """
+                INSERT INTO notebooks (notebook_name, notebook_path, description)
+                VALUES (?, ?, ?)
+                """
+                params = [notebook_name, notebook_path, description]
+                self.db.execute(sql, params)
+        except sqlite3.IntegrityError as e:
+            if "UNIQUE constraint" in str(e):
+                raise DuplicateNotebookError(f"Note book with name {notebook_name} already exists")
+            raise DatabaseError(f"Failed to create notebook: {str(e)}")
+        except (DatabaseError, sqlite3.Error, Exception) as e:
             raise DatabaseError(f"Failed to create notebook: {str(e)}")
         
     def get_notebook_id(self, notebook_name):
@@ -61,7 +64,7 @@ class NotebookModel:
             sql = "SELECT id FROM notebooks WHERE notebook_name = ?"
             result = self.db.fetchone(sql, [notebook_name])
             if result is None:
-                raise NotebookNotFoundError(f"Notebook with name {notebook_name} not found")
+                raise NotebookNotFoundError(f"Notebook with name {notebook_name} does not exist")
             return result["id"]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get notebook ID: {str(e)}")
@@ -110,30 +113,33 @@ class NotebookModel:
             # Check whether the notebook exists
             if not self.get_notebook(notebook_id):
                 raise NotebookNotFoundError(f"Notebook with ID {notebook_id} not found")
-            sql = "UPDATE notebooks SET"
-            updates = [] # Fields that need to be updated
-            params = [] # Parameters for the SQL query
-            # Add conditions for fields that need to be updated
-            if new_name:
-                updates.append(" notebook_name = ?")
-                params.append(new_name)
-            if new_path:
-                updates.append(" notebook_path = ?")
-                params.append(new_path)
-            if new_description:
-                updates.append(" description = ?")
-                params.append(new_description)
-            # Set update time by CURRENT_TIMESTAMP
-            updates.append(" updated_at = CURRENT_TIMESTAMP")
-            # Join updates
-            sql += ", ".join(updates)
-            sql += " WHERE id = ?"
-            params.append(notebook_id) 
-            # Execute update
-            self.db.execute(sql, params)
-        except sqlite3.IntegrityError:
-            raise DuplicateNotebookError(f"Notebook with name {new_name} already exists")
-        except sqlite3.Error as e:
+            with self.db.transaction():
+                sql = "UPDATE notebooks SET"
+                updates = [] # Fields that need to be updated
+                params = [] # Parameters for the SQL query
+                # Add conditions for fields that need to be updated
+                if new_name:
+                    updates.append(" notebook_name = ?")
+                    params.append(new_name)
+                if new_path:
+                    updates.append(" notebook_path = ?")
+                    params.append(new_path)
+                if new_description:
+                    updates.append(" description = ?")
+                    params.append(new_description)
+                # Set update time by CURRENT_TIMESTAMP
+                updates.append(" updated_at = CURRENT_TIMESTAMP")
+                # Join updates
+                sql += ", ".join(updates)
+                sql += " WHERE id = ?"
+                params.append(notebook_id) 
+                # Execute update
+                self.db.execute(sql, params)
+        except sqlite3.IntegrityError as e:
+            if "UNIQUE constraint" in str(e):
+                raise DuplicateNotebookError(f"Notebook with name {new_name} already exists")
+            raise DatabaseError(f"Failed to update notebook: {str(e)}")
+        except (DatabaseError, sqlite3.Error, Exception) as e:
             raise DatabaseError(f"Failed to update notebook: {str(e)}")
 
     def delete_notebook(self, notebook_id):
@@ -152,10 +158,11 @@ class NotebookModel:
             # Check whether the notebook exists
             if not self.get_notebook(notebook_id):
                 raise NotebookNotFoundError(f"Notebook with ID {notebook_id} not found")
-            sql = "DELETE FROM notebooks WHERE id = ?"
-            # Execute delete
-            self.db.execute(sql, [notebook_id])
-        except sqlite3.Error as e:
+            with self.db.transaction():
+                sql = "DELETE FROM notebooks WHERE id = ?"
+                # Execute delete
+                self.db.execute(sql, [notebook_id])
+        except (DatabaseError, sqlite3.Error, Exception) as e:
             raise DatabaseError(f"Failed to delete notebook: {str(e)}")
 
     def get_all_notebooks(self):
