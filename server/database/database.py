@@ -1,5 +1,6 @@
 from pathlib import Path
 import sqlite3
+from contextlib import contextmanager
 
 class Database:
     def __init__(self):
@@ -98,7 +99,7 @@ class Database:
                 id INTEGER PRIMARY KEY,
                 notebook_name TEXT NOT NULL UNIQUE,
                 notebook_path TEXT NOT NULL UNIQUE,
-                description TEXT NOT NULL UNIQUE,
+                description TEXT UNIQUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -172,12 +173,8 @@ class Database:
         Begin a transaction
         :return: None
         """
-        if not self.__connection:
-            raise ValueError("Database connection is not initialized")
         # Disable auto-commit
         self.__connection.isolation_level = None
-        if not self.__cursor:
-            raise ValueError("Cursor is not initialized. Please check the database connection")
         # Begin a transaction
         self.__cursor.execute("BEGIN;")
 
@@ -186,8 +183,6 @@ class Database:
         Commit a transaction
         :return: None
         """
-        if not self.__connection:
-            raise ValueError("Database connection is not initialized")
         # Enable auto-commit
         self.__connection.isolation_level = ''
         self.__connection.commit()
@@ -197,6 +192,26 @@ class Database:
         Rollback a transaction
         :return: None
         """
+        self.__connection.rollback()
+        
+    @contextmanager
+    def transaction(self):
+        """
+        Context manager for database transactions
+        :return: None
+        """
+        # Checking conditions before beginning a transaction
         if not self.__connection:
             raise ValueError("Database connection is not initialized")
-        self.__connection.rollback()
+        if not self.__cursor:
+            raise ValueError("Cursor is not initialized. Please check the database connection")
+        try:
+            # Begin a transaction
+            self.begin_transaction()
+            yield # Back to the with block to execute sql operations
+            # Commit if successful, other wise jump to the except block
+            self.commit_transaction()
+        except Exception:
+            # Rollback if an error occurs
+            self.rollback_transaction()
+            raise # Raise the errord
