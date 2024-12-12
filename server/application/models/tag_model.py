@@ -1,8 +1,7 @@
 import sqlite3
 from application.exceptions import (
-    DatabaseError,
     ValidationError,
-    TagError,
+    DatabaseError,
     TagNotFoundError,
     DuplicateTagError
 )
@@ -45,6 +44,9 @@ class TagModel:
         """
         Retrieve a tag's ID by its name
         :param tag_name: name of the tag
+        :raises ValidationError: if the tag name is None
+        :raises TagNotFoundError: if the tag does not exist
+        :raises DatabaseError: if database operation fails
         :return: ID of the tag
         """
         if tag_name is None:
