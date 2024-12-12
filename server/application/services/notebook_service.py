@@ -81,6 +81,8 @@ class NotebookService:
         :raises NotebookError: if update fails
         :return: True if the notebook is updated successfully, False otherwise
         """
+        if new_name is None and new_description is None:
+            raise NotebookError(f"Failed to update notebook {notebook_name}: No update parameter provided")
         try:
             notebook_id = self.notebook_model.get_notebook_id(notebook_name)
             # Change the path of the notebook if the new name is given
