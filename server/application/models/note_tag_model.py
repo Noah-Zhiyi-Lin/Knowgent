@@ -1,3 +1,9 @@
+import sqlite3
+from application.exceptions import (
+    ValidationError,
+    DatabaseError
+)
+
 class NoteTagModel:
     def __init__(self, db):
         """

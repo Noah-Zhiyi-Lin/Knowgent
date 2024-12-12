@@ -47,3 +47,9 @@ class DuplicateTagError(DuplicateResourceError):
     Raised when attempting to create a duplicate tag
     """
     pass
+
+class DuplicateNoteTagError(DuplicateResourceError):
+    """
+    Raised when attempting to create a duplicate note-tag association
+    """
+    pass
