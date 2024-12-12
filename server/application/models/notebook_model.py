@@ -86,7 +86,7 @@ class NotebookModel:
             sql = "SELECT * FROM notebooks WHERE id = ?"
             result =  self.db.fetchone(sql, [notebook_id])
             if result is None:
-                raise NotebookNotFoundError(f"Notebook with ID {notebook_id} not found")
+                raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
             return result
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get notebook: {str(e)}")
@@ -112,7 +112,7 @@ class NotebookModel:
         try:
             # Check whether the notebook exists
             if not self.get_notebook(notebook_id):
-                raise NotebookNotFoundError(f"Notebook with ID {notebook_id} not found")
+                raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
             with self.db.transaction():
                 sql = "UPDATE notebooks SET"
                 updates = [] # Fields that need to be updated
@@ -157,7 +157,7 @@ class NotebookModel:
         try:
             # Check whether the notebook exists
             if not self.get_notebook(notebook_id):
-                raise NotebookNotFoundError(f"Notebook with ID {notebook_id} not found")
+                raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
             with self.db.transaction():
                 sql = "DELETE FROM notebooks WHERE id = ?"
                 # Execute delete

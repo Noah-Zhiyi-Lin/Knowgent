@@ -106,6 +106,7 @@ class NoteModel:
         :param new_path: new path of the note
         :param new_notebook_id: new notebook id of the note
         :raises ValidationError: if the note ID or new notebook ID is invalid, or no update parameter is provided
+        :raises NoteNotFoundError: if the note does not exist
         :raises NotebookNotFoundError: if the notebook does not exist
         :raises DuplicateNoteError: if the note already exists
         :raises DatabaseError: if database operation fails
@@ -124,6 +125,9 @@ class NoteModel:
                 raise NotebookNotFoundError(f"Notebook with ID {new_notebook_id} does not exist")
         # Try to update the note
         try:
+            # Check whether the note exists
+            if not self.get_note(note_id):
+                raise NoteNotFoundError(f"Note with ID {note_id} does not exist")
             with self.db.transaction():
                 sql = "UPDATE notes SET"
                 updates = [] # Fileds need to be updated
