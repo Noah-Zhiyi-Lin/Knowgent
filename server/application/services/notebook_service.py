@@ -68,7 +68,7 @@ class NotebookService:
         try:
             notebook_id = self.notebook_model.get_notebook_id(notebook_name)
             return self.notebook_model.get_notebook(notebook_id)
-        except (ValidationError, NotebookNotFoundError, DatabaseError) as e:
+        except (ValidationError, NotebookNotFoundError, DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get notebook {notebook_name}: {str(e)}")
         
     def update_notebook(self, notebook_name, base_path, new_name = None, new_description = None):
@@ -81,8 +81,6 @@ class NotebookService:
         :raises NotebookError: if update fails
         :return: True if the notebook is updated successfully, False otherwise
         """
-        if new_name is None and new_description is None:
-            raise NotebookError(f"Failed to update notebook {notebook_name}: No update parameter provided")
         try:
             notebook_id = self.notebook_model.get_notebook_id(notebook_name)
             # Change the path of the notebook if the new name is given
@@ -101,7 +99,11 @@ class NotebookService:
                 new_description = new_description
             )
             return True
-        except (ValidationError, NotebookNotFoundError, DuplicateNotebookError, DatabaseError) as e:
+        except (ValidationError, 
+                NotebookNotFoundError,
+                DuplicateNotebookError,
+                DatabaseError,
+                Exception) as e:
             # Restore the original directory if update fails
             if new_path and new_path.exists():
                 new_path.rename(current_path)
@@ -124,9 +126,11 @@ class NotebookService:
             if notebook_path.exists():
                 self._remove_dir(notebook_path)
             return True
-        except (ValidationError, NotebookNotFoundError, DatabaseError) as e:
-            raise NotebookError(f"Failed to delete notebook {notebook_name}: {str(e)}")
-        except FileSystemError as e:
+        except (ValidationError,
+                NotebookNotFoundError,
+                DatabaseError,
+                FileSystemError,
+                Exception) as e:
             raise NotebookError(f"Failed to delete notebook {notebook_name}: {str(e)}")
         
     def get_all_notebooks(self):
@@ -137,7 +141,7 @@ class NotebookService:
         """
         try:
             return self.notebook_model.get_all_notebooks()
-        except DatabaseError as e:
+        except (DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get all notebooks: {str(e)}")
 
     def _remove_dir(self, path):

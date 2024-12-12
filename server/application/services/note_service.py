@@ -43,8 +43,8 @@ class NoteService:
                 notebook = self.notebook_service.get_notebook(notebook_name)
             except NotebookError as e:
                 raise e
-            notebook_id = notebook['id']
-            notebook_path = notebook['notebook_path']
+            notebook_id = notebook["id"]
+            notebook_path = notebook["notebook_path"]
             # Create note file path
             file_path = Path(notebook_path) / f"{title}.md"
             # Try to create the note
@@ -102,15 +102,13 @@ class NoteService:
         :raises NoteError: if update fails
         :return: True if update is successful, False otherwise
         """
-        if new_title is None and new_notebook_name is None:
-            raise NoteError(f"Failed to update note {title}: No update parameter provided")
         try:
             # Check current note status
             try:
                 note = self.get_note(title)
             except NoteError as e:
                 raise e
-            note_id = note['id']
+            note_id = note["id"]
             current_file_path = Path(note['file_path'])
             new_file_path = None
             # Handle notebook transfer
@@ -120,8 +118,8 @@ class NoteService:
                     new_notebook = self.notebook_service.get_notebook(new_notebook_name)
                 except NotebookError as e:
                     raise e
-                new_notebook_id = new_notebook['id']
-                new_notebook_path = new_notebook['notebook_path']
+                new_notebook_id = new_notebook["id"]
+                new_notebook_path = new_notebook["notebook_path"]
                 if new_title:
                     new_file_path = Path(new_notebook_path) / f"{new_title}.md"
                 else:
@@ -175,4 +173,35 @@ class NoteService:
         :raises NoteError: if deletion fails
         :return: True if the note is deleted successfully, False otherwise
         """
-        
+        try:
+            note_id = self.note_model.get_note_id(title)
+            note = self.note_model.get_note(note_id)
+            file_path = Path(note["file_path"])
+            # Delete note in database
+            self.note_model.delete_note(note_id)
+            # Delete note file
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                except Exception as e:
+                    raise FileSystemError
+            return True
+        except (
+            ValidationError,
+            NoteNotFoundError,
+            DatabaseError,
+            FileSystemError,
+            Exception
+        ) as e:
+            raise NoteError(f"Failed to delete note {title}: {str(e)}")
+    
+    def get_all_notes(self):
+        """
+        Get all notes
+        :raises NoteError: if retrieval fails
+        :return: all notes in the database
+        """
+        try:
+            return self.note_model.get_all_notes()
+        except (DatabaseError, Exception) as e:
+            raise NoteError(f"Failed to get all notes: {str(e)}")
