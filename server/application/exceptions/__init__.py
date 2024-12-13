@@ -15,7 +15,8 @@ from .resource import (
     DuplicateResourceError,
     DuplicateNotebookError,
     DuplicateNoteError,
-    DuplicateTagError
+    DuplicateTagError,
+    DuplicateNoteTagError
 )
 from .filesystem import FileSystemError
 from .operation import (
@@ -41,5 +42,6 @@ __all__ = [
     'DuplicateResourceError',
     'DuplicateNotebookError',
     'DuplicateNoteError',
-    'DuplicateTagError'
+    'DuplicateTagError',
+    'DuplicateNoteTagError'
 ]

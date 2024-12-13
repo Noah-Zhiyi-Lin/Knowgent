@@ -22,9 +22,7 @@ class NoteService:
         try:
             self.note_model = NoteModel(db)
             self.notebook_service = NotebookService(db)
-        except ValidationError as e:
-            raise NoteError(f"Failed to initialize NoteService: {str(e)}")
-        except NotebookError as e:
+        except (ValidationError, NotebookError) as e:
             raise NoteError(f"Failed to initialize NoteService: {str(e)}")
         except Exception as e:
             raise NoteError(f"Unexpected error during NoteService initialization: {str(e)}")
@@ -78,25 +76,33 @@ class NoteService:
             FileSystemError,
             Exception
         ) as e:
-            raise NoteError(f"Failed to create note {title}: {str(e)}")
+            raise NoteError(f"Failed to create note {title} in notebook {notebook_name}: {str(e)}")
     
-    def get_note(self, title):
+    def get_note(self, title, notebook_name):
         """
         Get a note by its title
         :param: title: title of the note
+        :param: notebook_name: name of the notebook which the note belongs to
         :raises NoteError: if retrieval fails
         :return: note details or None if not found
         """
         try:
-            note_id = self.note_model.get_note_id(title)
+            # Try to get notebook_id
+            try:
+                notebook = self.notebook_service.get_notebook(notebook_name)
+            except NotebookError as e:
+                raise e
+            notebook_id = notebook["id"]
+            note_id = self.note_model.get_note_id(title, notebook_id)
             return self.note_model.get_note(note_id)
-        except (ValidationError, NoteNotFoundError, DatabaseError) as e:
-            raise NoteError(f"Failed to get note {title}: {str(e)}")
+        except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
+            raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
         
-    def update_note(self, title, new_title = None, new_notebook_name = None):
+    def update_note(self, title, notebook_name, new_title = None, new_notebook_name = None):
         """
         Update a note's details
         :param title: current title of the note
+        :param notebook_name: name of the notebook which the note belongs to
         :param new_title: new title of the note
         :param new_notebook_name: the name of the new notebook which the note will belong to
         :raises NoteError: if update fails
@@ -105,7 +111,7 @@ class NoteService:
         try:
             # Check current note status
             try:
-                note = self.get_note(title)
+                note = self.get_note(title, notebook_name)
             except NoteError as e:
                 raise e
             note_id = note["id"]
@@ -164,18 +170,23 @@ class NoteService:
             DatabaseError,
             Exception
         ) as e:
-            raise NoteError(f"Failed to update note {title}: {str(e)}")
+            raise NoteError(f"Failed to update note {title} in notebook {notebook_name}: {str(e)}")
 
-    def delete_note(self, title):
+    def delete_note(self, title, notebook_name):
         """
         Delete a note
         :param title: title of the note
+        :param notebook_name: name of the notebook which the note belongs to
         :raises NoteError: if deletion fails
         :return: True if the note is deleted successfully, False otherwise
         """
         try:
-            note_id = self.note_model.get_note_id(title)
-            note = self.note_model.get_note(note_id)
+            # Try to get the note
+            try:
+                note = self.get_note(title, notebook_name)
+            except NoteError as e:
+                raise e
+            note_id = note["id"]
             file_path = Path(note["file_path"])
             # Delete note in database
             self.note_model.delete_note(note_id)
@@ -187,13 +198,14 @@ class NoteService:
                     raise FileSystemError
             return True
         except (
+            NoteError,
             ValidationError,
             NoteNotFoundError,
             DatabaseError,
             FileSystemError,
             Exception
         ) as e:
-            raise NoteError(f"Failed to delete note {title}: {str(e)}")
+            raise NoteError(f"Failed to delete note {title} in notebook {notebook_name}: {str(e)}")
     
     def get_all_notes(self):
         """

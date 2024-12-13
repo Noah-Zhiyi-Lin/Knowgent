@@ -56,7 +56,7 @@ class TagModel:
             sql = "SELECT id FROM tags WHERE tag_name = ?"
             result = self.db.fetchone(sql, [tag_name])
             if result is None:
-                raise TagNotFoundError(f"Tag name {tag_name} not found")
+                raise TagNotFoundError(f"Tag name {tag_name} does not exist")
             return result["id"]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get tag ID: {str(e)}")

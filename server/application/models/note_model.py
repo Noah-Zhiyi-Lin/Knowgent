@@ -17,6 +17,20 @@ class NoteModel:
         if db is None:
             raise ValidationError("Database connection cannot be None")
         self.db = db
+    
+    def __is_notebook_exists(self, notebook_id):
+        """
+        Check whether a notebook exists
+        :param notebook_id: ID of the notebook
+        :return: True if the notebook exists, False otherwise
+        """
+        if not isinstance(notebook_id, int) or notebook_id <= 0:
+            return False
+        check_sql = "SELECT id FROM notebooks WHERE id = ?"
+        result = self.db.fetchone(check_sql, [notebook_id])
+        if result is None:
+            return False
+        return True
         
     def create_note(self, title, file_path, notebook_id):
         """
@@ -36,12 +50,11 @@ class NoteModel:
             raise ValidationError("Note path cannot be None")
         if not isinstance(notebook_id, int) or notebook_id <= 0:
             raise ValidationError("Invalid notebook ID")
+        # Check if the notebook exists
+        if not self.__is_notebook_exists(notebook_id):
+            raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
         try:
             with self.db.transaction():
-                # Check if the notebook exists
-                check_sql = "SELECT id FROM notebooks WHERE id = ?"
-                if self.db.fetchone(check_sql, [notebook_id]) is None:
-                    raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
                 # Create the note
                 sql = """
                 INSERT INTO notes (title, file_path, notebook_id)
@@ -56,21 +69,28 @@ class NoteModel:
         except (DatabaseError, sqlite3.Error, Exception) as e:
             raise DatabaseError(f"Failed to create note: {str(e)}")
         
-    def get_note_id(self, title):
+    def get_note_id(self, title, notebook_id):
         """
         Retrieve a note's ID by title
         :param title: title of the note
-        :raises ValidationError: if the title is None
+        :param notebook_id: ID of the notebook which the note belongs to
+        :raises ValidationError: if the title is None, or notebook_id is invalid
         :raises NoteNotFoundError: if the note does not exist
+        :raises NotebookNotFoundError: if the notebook does not exist
         :raises DatabaseError: if database operation fails
         :return: ID of the note in database
         """
         if title is None:
             raise ValidationError("Note title cannote be None")
+        if not isinstance(notebook_id, int) or notebook_id <= 0:
+            raise ValidationError("Invalid notebook ID")
+        # Check if the notebook exists
+        if not self.__is_notebook_exists(notebook_id):
+            raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
         # Try to get the note's ID
         try:
-            sql = "SELECT id FROM notes WHERE title = ?"
-            result = self.db.fetchone(sql, [title])
+            sql = "SELECT id FROM notes WHERE title = ? AND notebook_id = ?"
+            result = self.db.fetchone(sql, [title, notebook_id])
             if result is None:
                 raise NoteNotFoundError(f"Note with title {title} does not exist")
             return result["id"]

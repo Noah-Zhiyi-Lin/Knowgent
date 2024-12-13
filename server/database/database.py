@@ -109,12 +109,13 @@ class Database:
         create_notes_table = """
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY,
-                title TEXT NOT NULL UNIQUE,
+                title TEXT NOT NULL,
                 file_path TEXT NOT NULL UNIQUE,
                 notebook_id INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (notebook_id) REFERENCES notebooks (id) ON DELETE CASCADE
+                UNIQUE (title, notebook_id)
             )
         """
         # Create table of tags
