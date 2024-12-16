@@ -97,7 +97,40 @@ class NoteService:
             return self.note_model.get_note(note_id)
         except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
             raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
-        
+    
+    def get_note_content(self, title, notebook_name):
+        """
+        Get the content of a note
+        :param title: title of the note
+        :param notebook_name: name of the notebook which the note belongs to
+        :raises NoteError: if retrieval fails
+        :return: content of the note
+        """
+        try:
+            # Try to get the path of the note file
+            try:
+                note = self.get_note(title, notebook_name)
+            except NoteError as e:
+                raise e
+            file_path = note["file_path"]
+            # Check whether the file exists
+            if not Path(file_path).exists():
+                raise FileSystemError(
+                    f"File of note {title} in notebook {notebook_name} does not exist: {file_path}"
+                )
+            # Try to read the note file
+            try:
+                with open(file_path, "r") as file:
+                    return file.read()
+            except IOError as e:
+                raise FileSystemError(
+                    f"Failed to read the file of note {title} in notebook {notebook_name}: {str(e)}"
+                )
+        except (NoteError, FileSystemError, Exception) as e:
+            raise NoteError(
+                f"Failed to get the content of note {title} in notebook {notebook_name}: {str(e)}"
+            )
+    
     def update_note(self, title, notebook_name, new_title = None, new_notebook_name = None):
         """
         Update a note's details

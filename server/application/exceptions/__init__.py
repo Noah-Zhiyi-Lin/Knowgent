@@ -25,6 +25,7 @@ from .operation import (
     TagError,
     NoteTagError
 )
+from .ollama import OllamaError
 
 __all__ = [
     'BaseError',
@@ -43,5 +44,6 @@ __all__ = [
     'DuplicateNotebookError',
     'DuplicateNoteError',
     'DuplicateTagError',
-    'DuplicateNoteTagError'
+    'DuplicateNoteTagError',
+    'OllamaError'
 ]
