@@ -4,13 +4,19 @@ from contextlib import contextmanager
 from application.exceptions import DatabaseError
 
 class Database:
-    def __init__(self):
+    def __init__(self, repository_name):
+        """
+        Initialize the database object
+        :param repository_name: name of the notebook repository
+        """
         # Path of the database file (attention that the name of database file is fixed)
-        self.__db_path = Path(__file__).parent / "database.db"
+        self.__db_path = Path(__file__).parent / f"{repository_name}.db"
         # Connection to the database
         self.__connection = None
         # The cursor of the database
         self.__cursor = None
+        # Execute initialization
+        self.initialize()
 
     def connect(self):
         """
