@@ -1,6 +1,6 @@
 from pathlib import Path
-from application.models.notebook_model import NotebookModel
-from application.exceptions import (
+from server.application.models.notebook_model import NotebookModel
+from server.application.exceptions import (
     ValidationError,
     DatabaseError,
     NotebookError,

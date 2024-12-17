@@ -1,7 +1,7 @@
 import ollama
 from ollama import Client
 import base64
-from application.exceptions.ollama import OllamaError
+from server.application.exceptions.ollama import OllamaError
 
 class ChatHistory:
     """

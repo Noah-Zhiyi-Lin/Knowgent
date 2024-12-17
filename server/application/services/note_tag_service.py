@@ -1,7 +1,7 @@
-from application.models.note_tag_model import NoteTagModel
-from application.services.note_service import NoteService
-from application.services.tag_service import TagService
-from application.exceptions import (
+from server.application.models.note_tag_model import NoteTagModel
+from server.application.services.note_service import NoteService
+from server.application.services.tag_service import TagService
+from server.application.exceptions import (
     ValidationError,
     DatabaseError,
     NoteNotFoundError,

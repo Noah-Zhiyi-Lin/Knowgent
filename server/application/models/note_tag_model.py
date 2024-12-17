@@ -1,5 +1,5 @@
 import sqlite3
-from application.exceptions import (
+from server.application.exceptions import (
     ValidationError,
     DatabaseError,
     NoteNotFoundError,
