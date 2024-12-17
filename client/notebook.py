@@ -49,14 +49,6 @@ class Notebook:
         except Exception as e:
             print(f'Failed to delete notebook: {e}')
 
-    def create_note(self, title):
-        """在笔记本中创建笔记"""
-        try:
-            note = Note(self.note_service.db, title, self.notebook_name)  # 创建 Note 实例
-            note.create()  # 调用 Note 的创建方法
-        except Exception as e:
-            print(f'Failed to create note in notebook: {e}')
-
     def get_notes(self):
         """获取笔记本中的所有笔记"""
         try:

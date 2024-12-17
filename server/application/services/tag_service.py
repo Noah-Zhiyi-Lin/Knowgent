@@ -1,5 +1,5 @@
-from application.models.tag_model import TagModel
-from application.exceptions import (
+from server.application.models.tag_model import TagModel
+from server.application.exceptions import (
     ValidationError,
     DatabaseError,
     TagNotFoundError,

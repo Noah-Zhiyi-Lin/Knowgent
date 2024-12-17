@@ -1,7 +1,7 @@
 from pathlib import Path
 import sqlite3
 from contextlib import contextmanager
-from application.exceptions import DatabaseError
+from server.application.exceptions import DatabaseError
 
 class Database:
     def __init__(self):

@@ -1,7 +1,7 @@
 from pathlib import Path
-from application.models.note_model import NoteModel
-from application.services.notebook_service import NotebookService
-from application.exceptions import (
+from server.application.models.note_model import NoteModel
+from server.application.services.notebook_service import NotebookService
+from server.application.exceptions import (
     ValidationError,
     DatabaseError,
     NotebookError,
