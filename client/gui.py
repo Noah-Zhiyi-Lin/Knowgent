@@ -1,17 +1,23 @@
 import os
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 from tkinterweb import HtmlFrame
 from .menu_builder import MenuBuilder
 from .file_manager import FileManager
 from .text_processor import TextProcessor
+from server.application.services.notebook_service import NotebookService
+from server.application.services.note_service import NoteService
 
 class KnowgentGUI:
-    def __init__(self, root):
+    def __init__(self, root, db):
         self.root = root
         self.file_manager = FileManager()
         self.text_processor = TextProcessor()
         self.markdown_mode = False
+        # 初始化后端服务
+        self.notebook_service = NotebookService(db)  # 初始化 NotebookService
+        self.note_service = NoteService(db)  # 初始化 NoteService
         
         # 更新主题配色
         self.themes = {
@@ -278,7 +284,7 @@ class KnowgentGUI:
 
         # 创建预览区
         self.preview_frame = ttk.Frame(self.paned_window, style='Custom.TFrame')
-        self.preview_area = HtmlFrame(self.preview_frame)
+        self.preview_area = HtmlFrame(self.preview_frame, messages_enabled=False)
         self.preview_area.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
         # 绑定事件
@@ -288,6 +294,15 @@ class KnowgentGUI:
         self.create_file_browser()
 
     def create_file_browser(self):
+        # 添加“创建 Notebook”按钮
+        create_notebook_button = ttk.Button(
+            self.file_browser_frame,
+            text="Create Notebook",
+            command=self.create_notebook,
+            style='Preview.TButton',
+        )
+        create_notebook_button.pack(side=tk.TOP, pady=10)  # 将按钮放置在顶部
+
         # 创建一个Frame来包含Treeview和滚动条
         browser_container = ttk.Frame(self.file_browser_frame, style='Custom.TFrame')
         browser_container.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
@@ -313,20 +328,40 @@ class KnowgentGUI:
         scrollbar.config(command=self.tree.yview)
 
         # 设置标题
-        self.tree.heading('#0', text="Directory Structure", anchor='w')
+        self.tree.heading('#0', text="Notebooks and Notes", anchor='w')
 
         # 绑定事件
         self.tree.bind("<Double-1>", self.on_double_click)
         self.tree.bind("<<TreeviewOpen>>", self.on_open_node)
         self.tree.bind("<Button-3>", self.show_context_menu)
 
-        # 初始化目录
-        self.populate_tree(os.path.expanduser("~"))
+        # path = Path(__file__).parent.parent / "MyRepository"
+        # # 检查路径是否存在，如果不存在则创建
+        # if not path.exists():
+        #     path.mkdir(parents=True)
+        # # 初始化目录
+        # self.populate_tree(os.path.expanduser(Path(__file__).parent.parent / "MyRepository"))
 
-    def populate_tree(self, path):
+        # 初始化笔记本和笔记
+        self.populate_tree()
+
+
+    # def populate_tree(self, path):
+    #     self.tree.delete(*self.tree.get_children())
+    #     root_node = self.tree.insert("", "end", text=path, open=True)
+    #     self.process_directory(root_node, path)
+
+    def populate_tree(self):
         self.tree.delete(*self.tree.get_children())
-        root_node = self.tree.insert("", "end", text=path, open=True)
-        self.process_directory(root_node, path)
+        # 获取所有笔记本
+        notebooks = self.notebook_service.get_all_notebooks()
+        for notebook in notebooks:
+            notebook_node = self.tree.insert("", "end", text=notebook['notebook_name'], open=False)
+            # 获取笔记本中的所有笔记
+            notes = self.note_service.get_all_notes_in_notebook(notebook['notebook_name'])
+            for note in notes:
+                self.tree.insert(notebook_node, "end", text=note['title'], open=False)
+        
 
     def process_directory(self, parent_node, path):
         try:
@@ -349,11 +384,29 @@ class KnowgentGUI:
             item = self.tree.parent(item)
         return os.path.join(*path_parts)
 
+    # def on_double_click(self, event):
+    #     item = self.tree.selection()[0]
+    #     full_path = self.get_full_path(item)
+    #     if self.file_manager.is_file(full_path):
+    #         self.open_file(full_path)
+
+
     def on_double_click(self, event):
         item = self.tree.selection()[0]
-        full_path = self.get_full_path(item)
-        if self.file_manager.is_file(full_path):
-            self.open_file(full_path)
+        item_type = self.tree.parent(item)  # 判断是笔记本还是笔记
+        if item_type:  # 如果是笔记
+            notebook_name = self.tree.item(item_type, "text")
+            note_title = self.tree.item(item, "text")
+            # 获取笔记内容
+            content = self.note_service.get_note_content(note_title, notebook_name)
+            if content:
+                self.text_area.delete(1.0, tk.END)
+                self.text_area.insert(tk.END, content)
+                self.root.title(f"Knowgent - {note_title} in {notebook_name}")
+        else:  # 如果是笔记本
+            notebook_name = self.tree.item(item, "text")
+            # 展开或收起笔记本
+            self.tree.item(item, open=not self.tree.item(item, "open"))
 
     def on_text_modified(self, event=None):
         """当文本内容改变时触发"""
@@ -539,60 +592,168 @@ class KnowgentGUI:
         full_path = self.get_full_path(selected_item)
         self.process_directory(selected_item, full_path)
 
+    # def show_context_menu(self, event):
+    #     selected_item = self.tree.selection()
+    #     if not selected_item:
+    #         return
+        
+    #     context_menu = tk.Menu(self.root, tearoff=0)
+    #     context_menu.add_command(label="Rename", command=self.rename_file)
+    #     context_menu.add_command(label="Delete", command=self.delete_file)
+    #     context_menu.post(event.x_root, event.y_root)
+    
     def show_context_menu(self, event):
-        selected_item = self.tree.selection()
+        """显示右键上下文菜单"""
+        selected_item = self.tree.identify_row(event.y)  # 获取右键点击的项
         if not selected_item:
             return
-        
+
         context_menu = tk.Menu(self.root, tearoff=0)
-        context_menu.add_command(label="Rename", command=self.rename_file)
-        context_menu.add_command(label="Delete", command=self.delete_file)
+        item_type = self.tree.parent(selected_item)  # 判断是笔记本还是笔记
+        if item_type:  # 如果是笔记
+            context_menu.add_command(label="Rename Note", command=self.rename_note)
+            context_menu.add_command(label="Delete Note", command=self.delete_note)
+        else:  # 如果是笔记本
+            context_menu.add_command(label="Create Note", command=lambda: self.create_note(selected_item))  # 创建笔记选项
+            context_menu.add_command(label="Rename Notebook", command=lambda: self.rename_notebook(selected_item))  # 重命名笔记本选项
+            context_menu.add_command(label="Delete Notebook", command=self.delete_notebook)
         context_menu.post(event.x_root, event.y_root)
 
-    def rename_file(self):
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showerror("Error", "Please select a file or directory.")
+    def create_notebook(self):
+        """创建新的 Notebook"""
+        # 弹出对话框，输入 Notebook 名称（必填）
+        notebook_name = simpledialog.askstring("Create Notebook", "Enter the name of the new notebook:", parent=self.root)
+        if not notebook_name:
+            messagebox.showwarning("Warning", "Notebook name is required. Operation cancelled.")
             return
 
-        old_name = self.tree.item(selected_item[0], "text")
-        new_name = simpledialog.askstring("Rename", "Enter new name:", initialvalue=old_name)
-        if new_name:
-            full_path = self.get_full_path(selected_item[0])
-            new_full_path = os.path.join(os.path.dirname(full_path), new_name)
+        # 弹出对话框，输入 Notebook 描述（选填）
+        description = simpledialog.askstring("Create Notebook", "Enter a description for the new notebook (optional):", parent=self.root)
 
-            if self.file_manager.rename_file(full_path, new_full_path):
-                self.tree.item(selected_item[0], text=new_name)
-                messagebox.showinfo("Success", "File renamed successfully!")
-
-    def delete_file(self):
-        """处理文件删除的前端逻辑"""
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showerror("Error", "Please select a file or directory.")
-            return
-
-        full_path = self.get_full_path(selected_item[0])
-        item_name = self.tree.item(selected_item[0], "text")
-        
-        # 确认删除
-        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete '{item_name}'?"):
-            # 调用后端删除方法
-            success, error_msg = self.file_manager.delete_file(full_path)
-            
+        # 调用后端服务创建 Notebook
+        try:
+            success = self.notebook_service.create_notebook(base_path="MyNotebooks", notebook_name=notebook_name, description=description)
             if success:
-                # 从树形视图中移除节点
-                self.tree.delete(selected_item[0])
-                messagebox.showinfo("Success", f"'{item_name}' has been deleted successfully!")
-                
-                # 如果当前打开的文件被删除，清空编辑器
-                if hasattr(self.file_manager, 'current_file_path') and \
-                   self.file_manager.current_file_path == full_path:
-                    self.text_area.delete("1.0", tk.END)
-                    self.root.title("Knowgent")
-                    self.file_manager.current_file_path = None
+                messagebox.showinfo("Success", f"Notebook '{notebook_name}' created successfully!")
+                self.populate_tree()  # 刷新树形结构
             else:
-                messagebox.showerror("Error", f"Failed to delete: {error_msg}")
+                messagebox.showerror("Error", f"Failed to create notebook '{notebook_name}'.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to create notebook: {str(e)}")
+
+    def rename_notebook(self, notebook_item):
+        """重命名笔记本"""
+        old_notebook_name = self.tree.item(notebook_item, "text")  # 获取当前笔记本名称
+        new_notebook_name = simpledialog.askstring("Rename Notebook", "Enter new notebook name:", initialvalue=old_notebook_name, parent=self.root)  # 弹窗输入新名称
+        if new_notebook_name and new_notebook_name != old_notebook_name:
+            try:
+                success = self.notebook_service.update_notebook(notebook_name=old_notebook_name, base_path="MyNotebooks", new_name=new_notebook_name)  # 调用后端服务重命名笔记本
+                if success:
+                    self.populate_tree()  # 刷新树形结构
+                    messagebox.showinfo("Success", f"Notebook renamed to '{new_notebook_name}' successfully!")
+                else:
+                    messagebox.showerror("Error", f"Failed to rename notebook '{old_notebook_name}'.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to rename notebook: {str(e)}")
+
+    def delete_notebook(self):
+        pass
+
+    # 添加创建笔记的逻辑。
+    def create_note(self, notebook_item):
+        """创建新笔记"""
+        notebook_name = self.tree.item(notebook_item, "text")  # 获取笔记本名称
+        note_title = simpledialog.askstring("Create Note", "Enter note title:", parent=self.root)  # 弹窗输入笔记标题
+        if note_title:
+            try:
+                success = self.note_service.create_note(note_title, notebook_name)  # 调用后端服务创建笔记
+                if success:
+                    self.populate_tree()  # 刷新树形结构
+                    messagebox.showinfo("Success", f"Note '{note_title}' created successfully!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to create note: {str(e)}")
+
+    def delete_note(self):
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Please select a note.")
+            return
+
+        notebook_name = self.tree.item(self.tree.parent(selected_item[0]), "text")
+        note_title = self.tree.item(selected_item[0], "text")
+        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete '{note_title}'?"):
+            try:
+                success = self.note_service.delete_note(note_title, notebook_name)
+                if success:
+                    self.populate_tree()  # 刷新树形结构
+                    messagebox.showinfo("Success", f"Note '{note_title}' deleted successfully!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete note: {str(e)}")
+
+
+    def rename_note(self):
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Please select a note.")
+            return
+
+        notebook_name = self.tree.item(self.tree.parent(selected_item[0]), "text")
+        old_title = self.tree.item(selected_item[0], "text")
+        new_title = simpledialog.askstring("Rename Note", "Enter new note title:", initialvalue=old_title, parent=self.root)
+        if new_title and new_title != old_title:
+            try:
+                success = self.note_service.update_note(old_title, notebook_name, new_title=new_title)
+                if success:
+                    self.populate_tree()  # 刷新树形结构
+                    messagebox.showinfo("Success", f"Note renamed to '{new_title}' successfully!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to rename note: {str(e)}")
+
+
+    # def rename_file(self):
+    #     selected_item = self.tree.selection()
+    #     if not selected_item:
+    #         messagebox.showerror("Error", "Please select a file or directory.")
+    #         return
+
+    #     old_name = self.tree.item(selected_item[0], "text")
+    #     new_name = simpledialog.askstring("Rename", "Enter new name:", initialvalue=old_name)
+    #     if new_name:
+    #         full_path = self.get_full_path(selected_item[0])
+    #         new_full_path = os.path.join(os.path.dirname(full_path), new_name)
+
+    #         if self.file_manager.rename_file(full_path, new_full_path):
+    #             self.tree.item(selected_item[0], text=new_name)
+    #             messagebox.showinfo("Success", "File renamed successfully!")
+
+    # def delete_file(self):
+    #     """处理文件删除的前端逻辑"""
+    #     selected_item = self.tree.selection()
+    #     if not selected_item:
+    #         messagebox.showerror("Error", "Please select a file or directory.")
+    #         return
+
+    #     full_path = self.get_full_path(selected_item[0])
+    #     item_name = self.tree.item(selected_item[0], "text")
+        
+    #     # 确认删除
+    #     if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete '{item_name}'?"):
+    #         # 调用后端删除方法
+    #         success, error_msg = self.file_manager.delete_file(full_path)
+            
+    #         if success:
+    #             # 从树形视图中移除节点
+    #             self.tree.delete(selected_item[0])
+    #             messagebox.showinfo("Success", f"'{item_name}' has been deleted successfully!")
+                
+    #             # 如果当前打开的文件被删除，清空编辑器
+    #             if hasattr(self.file_manager, 'current_file_path') and \
+    #                self.file_manager.current_file_path == full_path:
+    #                 self.text_area.delete("1.0", tk.END)
+    #                 self.root.title("Knowgent")
+    #                 self.file_manager.current_file_path = None
+    #         else:
+    #             messagebox.showerror("Error", f"Failed to delete: {error_msg}")
 
     def cut_text(self):
         self.copy_text()

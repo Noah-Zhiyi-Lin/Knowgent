@@ -78,25 +78,25 @@ class NoteService:
         ) as e:
             raise NoteError(f"Failed to create note {title} in notebook {notebook_name}: {str(e)}")
     
-    def get_note(self, title, notebook_name):
-        """
-        Get a note by its title
-        :param: title: title of the note
-        :param: notebook_name: name of the notebook which the note belongs to
-        :raises NoteError: if retrieval fails
-        :return: note details or None if not found
-        """
-        try:
-            # Try to get notebook_id
-            try:
-                notebook = self.notebook_service.get_notebook(notebook_name)
-            except NotebookError as e:
-                raise e
-            notebook_id = notebook["id"]
-            note_id = self.note_model.get_note_id(title, notebook_id)
-            return self.note_model.get_note(note_id)
-        except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
-            raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
+    # def get_note(self, title, notebook_name):
+    #     """
+    #     Get a note by its title
+    #     :param: title: title of the note
+    #     :param: notebook_name: name of the notebook which the note belongs to
+    #     :raises NoteError: if retrieval fails
+    #     :return: note details or None if not found
+    #     """
+    #     try:
+    #         # Try to get notebook_id
+    #         try:
+    #             notebook = self.notebook_service.get_notebook(notebook_name)
+    #         except NotebookError as e:
+    #             raise e
+    #         notebook_id = notebook["id"]
+    #         note_id = self.note_model.get_note_id(title, notebook_id)
+    #         return self.note_model.get_note(note_id)
+    #     except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
+    #         raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
     
     def get_note_content(self, title, notebook_name):
         """
@@ -240,6 +240,76 @@ class NoteService:
         ) as e:
             raise NoteError(f"Failed to delete note {title} in notebook {notebook_name}: {str(e)}")
     
+    # def get_all_notes_in_notebook(self, notebook_name):
+    #     """
+    #     Get all notes in a notebook
+    #     :param: notebook_name: name of the notebook
+    #     :raises: NoteError: if retrieval fails
+    #     :return: all notes in the notebook
+    #     """
+    #     try:
+    #         # Try to get notebook id
+    #         try:
+    #             notebook = self.notebook_service.get_notebook(notebook_name)
+    #         except NotebookError as e:
+    #             raise e
+    #         notebook_id = notebook["id"]
+    #         # Get all notes in the notebook
+    #         return self.note_model.get_all_notes_in_notebook(notebook_id)
+    #     except (
+    #         NotebookError,
+    #         ValidationError,
+    #         NotebookNotFoundError,
+    #         DatabaseError,
+    #         Exception
+    #     ) as e:
+    #         raise NoteError(f"Failed to get all notes in notebook {notebook_name}: {str(e)}")
+    
+    def get_all_notes(self):
+        """
+        Get all notes
+        :raises NoteError: if retrieval fails
+        :return: all notes in the database
+        """
+        try:
+            return self.note_model.get_all_notes()
+        except (DatabaseError, Exception) as e:
+            raise NoteError(f"Failed to get all notes: {str(e)}")
+        
+
+    def get_note(self, title, notebook_name):
+        """
+        Get a note by its title
+        :param: title: title of the note
+        :param: notebook_name: name of the notebook which the note belongs to
+        :raises NoteError: if retrieval fails
+        :return: note details or None if not found
+        """
+        try:
+            # Try to get notebook_id
+            try:
+                notebook = self.notebook_service.get_notebook(notebook_name)
+                print(notebook)
+            except NotebookError as e:
+                raise e
+            notebook_id = notebook["id"]
+            note_id = self.note_model.get_note_id(title, notebook_id)
+            note_tuple = self.note_model.get_note(note_id)
+
+            # 将元组转换为字典
+            note_dict = {
+                'id': note_tuple[0],
+                'title': note_tuple[1],
+                'file_path': note_tuple[2],
+                'notebook_id': note_tuple[3],
+                'created_at': note_tuple[4],
+                'updated_at': note_tuple[5]
+            }
+
+            return note_dict
+        except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
+            raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
+
     def get_all_notes_in_notebook(self, notebook_name):
         """
         Get all notes in a notebook
@@ -254,8 +324,22 @@ class NoteService:
             except NotebookError as e:
                 raise e
             notebook_id = notebook["id"]
-            # Get all notes in the notebook
-            return self.note_model.get_all_notes_in_notebook(notebook_id)
+            notes_tuples = self.note_model.get_all_notes_in_notebook(notebook_id)
+
+            # 将元组列表转换为字典列表
+            notes_dicts = []
+            for note_tuple in notes_tuples:
+                note_dict = {
+                    'id': note_tuple[0],
+                    'title': note_tuple[1],
+                    'file_path': note_tuple[2],
+                    'notebook_id': note_tuple[3],
+                    'created_at': note_tuple[4],
+                    'updated_at': note_tuple[5]
+                }
+                notes_dicts.append(note_dict)
+
+            return notes_dicts
         except (
             NotebookError,
             ValidationError,
@@ -264,14 +348,3 @@ class NoteService:
             Exception
         ) as e:
             raise NoteError(f"Failed to get all notes in notebook {notebook_name}: {str(e)}")
-    
-    def get_all_notes(self):
-        """
-        Get all notes
-        :raises NoteError: if retrieval fails
-        :return: all notes in the database
-        """
-        try:
-            return self.note_model.get_all_notes()
-        except (DatabaseError, Exception) as e:
-            raise NoteError(f"Failed to get all notes: {str(e)}")

@@ -1,9 +1,10 @@
 import os
+from pathlib import Path
 from tkinter import messagebox
 
 class FileManager:
     def __init__(self):
-        self.current_file_path = None
+        self.current_file_path = Path(__file__).parent
 
     def read_file(self, file_path):
         try:

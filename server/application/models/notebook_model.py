@@ -65,7 +65,7 @@ class NotebookModel:
             result = self.db.fetchone(sql, [notebook_name])
             if result is None:
                 raise NotebookNotFoundError(f"Notebook with name {notebook_name} does not exist")
-            return result["id"]
+            return result[0]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get notebook ID: {str(e)}")
 

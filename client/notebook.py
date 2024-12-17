@@ -11,7 +11,7 @@ class Notebook:
     def create(self):
         """创建笔记本"""
         try:
-            success = self.notebook_service.create_notebook(base_path="path/to/notebooks", 
+            success = self.notebook_service.create_notebook(base_path="MyNotebooks", 
                                                              notebook_name=self.notebook_name, 
                                                              description=self.description)
             if success:

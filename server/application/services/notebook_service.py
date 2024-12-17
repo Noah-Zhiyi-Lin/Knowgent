@@ -63,11 +63,24 @@ class NotebookService:
         Get a notebook by its name
         :param notebook_name: name of the notebook
         :raises NotebookError: if retrieval fails
-        :return: notebook details or None if not found
+        :return: notebook details as a dictionary or None if not found
         """
         try:
             notebook_id = self.notebook_model.get_notebook_id(notebook_name)
-            return self.notebook_model.get_notebook(notebook_id)
+            # 从模型层获取元组数据
+            notebook_tuple = self.notebook_model.get_notebook(notebook_id)
+
+            # 将元组转换为字典
+            notebook_dict = {
+                'id': notebook_tuple[0],
+                'notebook_name': notebook_tuple[1],
+                'notebook_path': notebook_tuple[2],
+                'description': notebook_tuple[3],
+                'created_at': notebook_tuple[4],
+                'updated_at': notebook_tuple[5]
+            }
+
+            return notebook_dict
         except (ValidationError, NotebookNotFoundError, DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get notebook {notebook_name}: {str(e)}")
         
@@ -137,10 +150,26 @@ class NotebookService:
         """
         Get all notebooks from the database
         :raises NotebookError: if retrieval fails
-        :return: list of all notebooks
+        :return: list of all notebooks as dictionaries
         """
         try:
-            return self.notebook_model.get_all_notebooks()
+            # 从模型层获取元组列表
+            notebooks_tuples = self.notebook_model.get_all_notebooks()
+
+            # 将元组列表转换为字典列表
+            notebooks_dicts = []
+            for notebook_tuple in notebooks_tuples:
+                notebook_dict = {
+                    'id': notebook_tuple[0],
+                    'notebook_name': notebook_tuple[1],
+                    'notebook_path': notebook_tuple[2],
+                    'description': notebook_tuple[3],
+                    'created_at': notebook_tuple[4],
+                    'updated_at': notebook_tuple[5]
+                }
+                notebooks_dicts.append(notebook_dict)
+
+            return notebooks_dicts
         except (DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get all notebooks: {str(e)}")
 
