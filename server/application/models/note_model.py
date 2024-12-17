@@ -200,6 +200,26 @@ class NoteModel:
         except (DatabaseError, sqlite3.Error, Exception) as e:
             raise DatabaseError(f"Failed to delete note: {str(e)}")
         
+    def get_all_notes_in_notebook(self, notebook_id):
+        """
+        Retrieve all notes in a notebook
+        :param notebook_id: ID of the notebook
+        :raises: ValidationError: if the notebook ID is invalid
+        :raises: NotebookNotFoundError: if the notebook does not exist
+        :raises: DatabaseError: if database operation fails
+        :return: List of all notes in the notebook
+        """
+        if not isinstance(notebook_id, int) or notebook_id <= 0:
+            raise ValidationError("Invalid notebook ID")
+        # Check whether the notebook exists
+        if not self.__is_notebook_exists(notebook_id):
+            raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
+        try:
+            sql = "SELECT * FROM notes WHERE notebook_id = ?"
+            return self.db.fetchall(sql, [notebook_id])
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to get all notes in notebook with ID {notebook_id}: {str(e)}")
+        
     def get_all_notes(self):
         """
         Retrieve all notes

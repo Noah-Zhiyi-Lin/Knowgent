@@ -240,6 +240,31 @@ class NoteService:
         ) as e:
             raise NoteError(f"Failed to delete note {title} in notebook {notebook_name}: {str(e)}")
     
+    def get_all_notes_in_notebook(self, notebook_name):
+        """
+        Get all notes in a notebook
+        :param: notebook_name: name of the notebook
+        :raises: NoteError: if retrieval fails
+        :return: all notes in the notebook
+        """
+        try:
+            # Try to get notebook id
+            try:
+                notebook = self.notebook_service.get_notebook(notebook_name)
+            except NotebookError as e:
+                raise e
+            notebook_id = notebook["id"]
+            # Get all notes in the notebook
+            return self.note_model.get_all_notes_in_notebook(notebook_id)
+        except (
+            NotebookError,
+            ValidationError,
+            NotebookNotFoundError,
+            DatabaseError,
+            Exception
+        ) as e:
+            raise NoteError(f"Failed to get all notes in notebook {notebook_name}: {str(e)}")
+    
     def get_all_notes(self):
         """
         Get all notes
