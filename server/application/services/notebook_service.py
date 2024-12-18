@@ -10,7 +10,7 @@ from server.application.exceptions import (
 )
 
 class NotebookService:
-    def __init__(self, db):
+    def __init__(self, db, base_path):
         """
         Initialize the NotebookService with a connection to the database
         :param db: connection to the database
@@ -18,15 +18,15 @@ class NotebookService:
         """
         try:
             self.notebook_model = NotebookModel(db)
+            self.__base_path = base_path
         except ValidationError as e:
             raise NotebookError(f"Failed to initialize NotebookService: {str(e)}")
         except Exception as e:
             raise NotebookError(f"Unexcepted error during NotebookService initialization: {str(e)}")
         
-    def create_notebook(self, base_path, notebook_name, description):
+    def create_notebook(self, notebook_name, description):
         """
         Create a new notebook
-        :param base_path: base path where notebooks are stored
         :param notebook_name: name of the new notebook
         :param description: description of the new notebook (optional)
         :raises NotebookError: if notebook creation fails
@@ -34,7 +34,7 @@ class NotebookService:
         """
         try:
             # Create the directory for the new notebook
-            notebook_path = Path(base_path) / notebook_name
+            notebook_path = Path(self.__base_path) / notebook_name
             try:
                 notebook_path.mkdir(parents = True, exist_ok = True)
             except OSError as e:
@@ -84,11 +84,10 @@ class NotebookService:
         except (ValidationError, NotebookNotFoundError, DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get notebook {notebook_name}: {str(e)}")
         
-    def update_notebook(self, notebook_name, base_path, new_name = None, new_description = None):
+    def update_notebook(self, notebook_name, new_name = None, new_description = None):
         """
         Update a notebook's details
         :param notebook_name: current name of the notebook
-        :param base_path: base path where notebooks are stored
         :param new_name: new name of the notebook
         :param new_description: new description of the notebook
         :raises NotebookError: if update fails
@@ -101,8 +100,8 @@ class NotebookService:
             if new_name:
                 if(new_name == notebook_name):
                     raise ValidationError("New notebook name must be different from the current notebook name")
-                current_path = Path(base_path) / notebook_name
-                new_path = Path(base_path) / new_name
+                current_path = Path(self.__base_path) / notebook_name
+                new_path = Path(self.__base_path) / new_name
                 if current_path.exists():
                     current_path.rename(new_path)
             self.notebook_model.update_notebook(
@@ -122,17 +121,16 @@ class NotebookService:
                 new_path.rename(current_path)
             raise NotebookError(f"Failed to update notebook {notebook_name}: {str(e)}")
         
-    def delete_notebook(self, notebook_name, base_path):
+    def delete_notebook(self, notebook_name):
         """
         Delete a notebook
         :param notebook_name: name of the notebook
-        :param base_path: base path where notebooks are stored
         :raises NotebookError: if deletion fails
         :return: True if the notebook is deleted successfully, False otherwise
         """
         try:
             notebook_id = self.notebook_model.get_notebook_id(notebook_name)
-            notebook_path = Path(base_path) / notebook_name
+            notebook_path = Path(self.__base_path) / notebook_name
             # Delete the notebook from the database
             self.notebook_model.delete_notebook(notebook_id)
             # Delete the notebook directory
