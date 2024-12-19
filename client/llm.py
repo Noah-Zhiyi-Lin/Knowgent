@@ -4,7 +4,7 @@ from tkinter import scrolledtext
 from tkinter import ttk
 from tkinter import PhotoImage
 from tkinter import filedialog
-
+import threading
 
 class llmagent:
 
@@ -12,6 +12,7 @@ class llmagent:
         self.Ollama = Ollama()
         self.botstate = False
         self.bots=['qwen2.5:0.5b', 'llama3.2:1b', 'nomic-embed-text', 'mxbai-embed-large', ]
+        self.hint_label=None
     def create_chat(self,root):
         self.chat=ttk.Frame(root, style="Custom.TFrame")
         # ================= 聊天显示区域（带滚动条） ================= #
@@ -155,7 +156,7 @@ class llmagent:
         message_canvas = tk.Canvas(message_frame, bg="white", highlightthickness=0)
         message_canvas.pack()
 
-        max_width = 600  # 最大气泡宽度
+        max_width = 400  # 最大气泡宽度
         text_id = message_canvas.create_text(10, 10, anchor="nw", text=text, font=("等线", 12), fill="black", width=max_width)
 
         # 动态计算文本宽高
@@ -174,23 +175,31 @@ class llmagent:
         # 调整Canvas的大小
         message_canvas.config(width=text_width + 10, height=text_height + 10)
 
+        return message_frame
+
     # 发送消息的函数
     def send_message(self):
         if self.botstate:
             user_text = self.input_entry.get().strip()
             if user_text:
-
-                self.add_message("user", user_text)  # 添加用户消息
+                print("send")
                 self.input_entry.delete("0", tk.END)
-                reply=self.Ollama.chat(self.model_name, user_text,include_history=True, image_path=self.image_path)
-                self.add_message("bot", reply)
-                
+                self.add_message("user", user_text)
+                mesg=self.add_message("message","...")
+                thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg))
+                thread.start()
                 self.image_path = None
             # 滚动到底部
             self.chat_canvas.yview_moveto(1.0)
             if self.hint_label:
                 self.hint_label.destroy()
-        
+
+    def get_bot_reply(self, user_text,mesg):
+        reply = self.Ollama.chat(self.model_name, user_text, include_history=True, image_path=self.image_path)
+        # 在主线程中更新 UI
+        mesg.destroy()
+        self.add_message("bot", reply)
+
     def upload_image(self): 
         try:       
             file_path = filedialog.askopenfilename(
