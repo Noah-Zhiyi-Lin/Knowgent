@@ -1,3 +1,4 @@
 .idea/
 server/application/controllers
 .venv/
+__pycache__/
