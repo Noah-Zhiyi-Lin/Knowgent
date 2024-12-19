@@ -6,6 +6,7 @@ from tkinterweb import HtmlFrame
 from .menu_builder import MenuBuilder
 from .file_manager import FileManager
 from .text_processor import TextProcessor
+from .llm import llmagent
 from server.application.services.notebook_service import NotebookService
 from server.application.services.note_service import NoteService
 
@@ -15,10 +16,14 @@ class KnowgentGUI:
         self.file_manager = FileManager()
         self.text_processor = TextProcessor()
         self.markdown_mode = False
+        self.chat_mode=False
+        self.button_offset_x=0, 
+        self.button_offset_y=0
         # 初始化后端服务
         self.notebook_service = NotebookService(db)  # 初始化 NotebookService
         self.note_service = NoteService(db)  # 初始化 NoteService
         
+        self.is_left_frame_visible = False
         # 更新主题配色
         self.themes = {
             'Light': {
@@ -233,7 +238,7 @@ class KnowgentGUI:
 
         # 创建编辑器框架
         self.editor_frame = ttk.Frame(self.paned_window, style='Custom.TFrame')
-        self.paned_window.add(self.editor_frame, weight=3)
+        self.paned_window.add(self.editor_frame,weight=3)
 
         # 创建编辑器顶部框架
         self.editor_top_frame = ttk.Frame(self.editor_frame, style='Custom.TFrame')
@@ -253,6 +258,7 @@ class KnowgentGUI:
         )
         self.markdown_button.pack(side=tk.RIGHT, padx=5, pady=2)
 
+        
         # 创建文本编辑区和其滚动条
         editor_container = ttk.Frame(self.editor_frame, style='Custom.TFrame')
         editor_container.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
@@ -282,6 +288,23 @@ class KnowgentGUI:
         self.text_area.pack(fill=tk.BOTH, expand=True)
         editor_scrollbar.config(command=self.text_area.yview)
 
+        self.chat_button = tk.Button(editor_container, 
+                                      text="AI", 
+                                      height=3,
+                                      width=6,
+                                      bg="#DEDEDE", 
+                                      fg="black", 
+                                      font=("Arial", 12), 
+                                    command=self.toggle_chat, 
+                                    relief="ridge", 
+                                    borderwidth=0.5
+                                    )
+        self.chat_button.tkraise()
+        self.chat_button.pack(side=tk.RIGHT, padx=30, pady=30)
+        self.root.bind('<Control-k>', lambda e:self.toggle_chat())
+
+        
+
         # 创建预览区
         self.preview_frame = ttk.Frame(self.paned_window, style='Custom.TFrame')
         self.preview_area = HtmlFrame(self.preview_frame, messages_enabled=False)
@@ -289,10 +312,27 @@ class KnowgentGUI:
 
         # 绑定事件
         self.text_area.bind('<<Modified>>', self.on_text_modified)
+
+        self.chat=llmagent()
+        self.chat_window= self.chat.create_chat(self.paned_window)
+        
+
+        
         
         # 创建文件浏览器
         self.create_file_browser()
 
+    def update_button_position(self,button):
+        """动态计算按钮初始位置（右下角）"""
+        button_width = 40
+        button_height = 40
+        frame_width = self.editor_frame.winfo_width()
+        frame_height = self.editor_frame.winfo_height()
+        x = frame_width - button_width - 10  # 距离右边和下边各留 10px 间距
+        y = frame_height - button_height - 10
+        button.place(x=x, y=y, width=button_width, height=button_height)
+        button.tkraise()
+    
     def create_file_browser(self):
         # 添加“创建 Notebook”按钮
         create_notebook_button = ttk.Button(
@@ -422,7 +462,7 @@ class KnowgentGUI:
         if self.markdown_mode:
             # 启用预览模式
             self.markdown_button.configure(text="Hide")
-            self.paned_window.add(self.preview_frame)  # 添加预览窗口
+            self.paned_window.add(self.preview_frame,weight=9)  # 添加预览窗口
             self.update_preview()  # 更新预览内容
         else:
             # 禁用预览模式
@@ -796,3 +836,14 @@ class KnowgentGUI:
             updated_content = self.text_processor.replace_all(content, replace_word, new_word)
             self.text_area.delete("1.0", tk.END)
             self.text_area.insert("1.0", updated_content)
+
+    # ================= 悬浮按钮功能 ================= #
+    
+    
+    def toggle_chat(self):
+        self.chat_mode = not self.chat_mode
+        if self.chat_mode:
+            self.paned_window.add(self.chat_window,weight=5) # 显示左侧窗口
+        else:
+            self.paned_window.remove(self.chat_window) # 隐藏左侧窗口
+

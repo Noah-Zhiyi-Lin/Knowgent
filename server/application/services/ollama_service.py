@@ -43,7 +43,7 @@ class ChatHistory:
         self.history = []
 
 class OllamaService:
-    def __init__(self, host):
+    def __init__(self, host='http://localhost:11434'):
         """
         Initialize the Ollama service with the host of ollama server
         :param host: the host of ollama server
@@ -61,7 +61,7 @@ class OllamaService:
         :return: the list of model names
         """
         try:
-            list_response = self.client.list()
+            list_response = self.__client.list()
             model_list = []
             for i in list_response.models:
                 model_list.append(i.model)
@@ -99,7 +99,7 @@ class OllamaService:
             # Check whether the model is already available
             try:
                 if self.is_model_available(model_name):
-                    return False
+                    return True
             except OllamaError as e:
                 raise e
             # Pull the model
@@ -107,6 +107,7 @@ class OllamaService:
                 ollama.pull(model_name)
                 return True
             except ollama.ResponseError as e:
+                return False
                 raise e
         except ollama.ResponseError as e:
             raise OllamaError(f"Failed to pull model {model_name}, HTTP status code: {e.status_code}")
@@ -154,9 +155,10 @@ class OllamaService:
                     '''
                 }
             ]
+            image_base64 = None
             if not image_path:
                 if include_history:
-                    history = self.chat_history.get_history()
+                    history = self.__chat_history.get_history()
                     for i in history:
                         messages.append(i)
                 messages.append(
@@ -167,9 +169,11 @@ class OllamaService:
                 )
             else:
                 # Encode the image to base64 and add it to the message
-                image_base64 = None
+                
+                
                 try:
                     image_base64 = self.__encode_image_to_base64(image_path)
+                    
                     messages.append(
                         {
                             "role": "user",
@@ -198,7 +202,7 @@ class OllamaService:
         except (OllamaError, Exception) as e:
             raise OllamaError(f"Failed to chat with the model/LLM: {str(e)}")
 
-    def get_chat_histtory(self):
+    def get_chat_history(self):
         """
         Get chat history
         :return: the chat history (list of directions)

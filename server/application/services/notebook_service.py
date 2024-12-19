@@ -10,7 +10,7 @@ from server.application.exceptions import (
 )
 
 class NotebookService:
-    def __init__(self, db, base_path):
+    def __init__(self, db, base_path='.'):
         """
         Initialize the NotebookService with a connection to the database
         :param db: connection to the database

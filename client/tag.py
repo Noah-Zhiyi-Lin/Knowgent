@@ -47,3 +47,6 @@ class Tag:
             return all_tags
         except Exception as e:
             print(f'Failed to get all tags: {e}')
+
+
+
