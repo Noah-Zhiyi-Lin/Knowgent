@@ -20,7 +20,7 @@ class KnowgentGUI:
         self.button_offset_x=0, 
         self.button_offset_y=0
         # 初始化后端服务
-        self.notebook_service = NotebookService(db)  # 初始化 NotebookService
+        self.notebook_service = NotebookService(db, base_path="MyNotebooks")  # 初始化 NotebookService
         self.note_service = NoteService(db)  # 初始化 NoteService
         
         self.is_left_frame_visible = False
@@ -247,7 +247,7 @@ class KnowgentGUI:
         # 创建一个空的填充框架
         self.spacer = ttk.Frame(self.editor_top_frame, style='Custom.TFrame')
         self.spacer.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
+        
         # 添加Markdown预览按钮
         self.markdown_button = ttk.Button(
             self.editor_top_frame, 
@@ -257,7 +257,16 @@ class KnowgentGUI:
             command=self.toggle_markdown_preview
         )
         self.markdown_button.pack(side=tk.RIGHT, padx=5, pady=2)
-
+        
+        # 添加保存按钮
+        save_button = ttk.Button(
+            self.editor_top_frame, 
+            text="Save",
+            width=8,
+            style='Preview.TButton',
+            command=self.save_note
+        )
+        save_button.pack(side=tk.RIGHT, padx=5, pady=2)
         
         # 创建文本编辑区和其滚动条
         editor_container = ttk.Frame(self.editor_frame, style='Custom.TFrame')
@@ -315,9 +324,7 @@ class KnowgentGUI:
 
         self.chat=llmagent()
         self.chat_window= self.chat.create_chat(self.paned_window)
-        
-
-        
+                
         
         # 创建文件浏览器
         self.create_file_browser()
@@ -396,7 +403,7 @@ class KnowgentGUI:
         # 获取所有笔记本
         notebooks = self.notebook_service.get_all_notebooks()
         for notebook in notebooks:
-            notebook_node = self.tree.insert("", "end", text=notebook['notebook_name'], open=False)
+            notebook_node = self.tree.insert("", "end", text=notebook['notebook_name'], open=True)
             # 获取笔记本中的所有笔记
             notes = self.note_service.get_all_notes_in_notebook(notebook['notebook_name'])
             for note in notes:
@@ -424,29 +431,28 @@ class KnowgentGUI:
             item = self.tree.parent(item)
         return os.path.join(*path_parts)
 
-    # def on_double_click(self, event):
-    #     item = self.tree.selection()[0]
-    #     full_path = self.get_full_path(item)
-    #     if self.file_manager.is_file(full_path):
-    #         self.open_file(full_path)
-
-
     def on_double_click(self, event):
+        """
+        双击打开笔记并加载内容
+        """
         item = self.tree.selection()[0]
         item_type = self.tree.parent(item)  # 判断是笔记本还是笔记
         if item_type:  # 如果是笔记
             notebook_name = self.tree.item(item_type, "text")
             note_title = self.tree.item(item, "text")
-            # 获取笔记内容
-            content = self.note_service.get_note_content(note_title, notebook_name)
-            if content:
-                self.text_area.delete(1.0, tk.END)
-                self.text_area.insert(tk.END, content)
-                self.root.title(f"Knowgent - {note_title} in {notebook_name}")
+            self.current_notebook = notebook_name
+            self.current_note = note_title
+            try:
+                # 获取笔记内容
+                content = self.note_service.get_note_content(note_title, notebook_name)
+                self.text_area.delete(1.0, tk.END)  # 清空编辑区
+                self.text_area.insert(tk.END, content)  # 显示笔记内容
+                self.root.title(f"Knowgent - {note_title} in {notebook_name}")  # 更新窗口标题
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load note: {str(e)}")
         else:  # 如果是笔记本
             notebook_name = self.tree.item(item, "text")
-            # 展开或收起笔记本
-            self.tree.item(item, open=not self.tree.item(item, "open"))
+            self.tree.item(item, open=not self.tree.item(item, "open"))  # 展开或收起笔记本
 
     def on_text_modified(self, event=None):
         """当文本内容改变时触发"""
@@ -585,12 +591,17 @@ class KnowgentGUI:
                 elif self.markdown_mode:
                     self.update_preview()
 
-    def save_file(self):
-        content = self.text_area.get(1.0, tk.END)
-        if not self.file_manager.current_file_path:
-            self.save_file_as()
-        else:
-            self.file_manager.save_file(content)
+    # def save_file(self):
+    #     """保存当前编辑区的内容到文件"""
+    #     content = self.text_area.get(1.0, tk.END)  # 获取编辑区的内容
+    #     if not self.file_manager.current_file_path:
+    #         self.save_file_as()  # 如果没有当前文件路径，调用另存为
+    #     else:
+    #         try:
+    #             self.file_manager.save_file(content, self.file_manager.current_file_path)  # 保存内容到文件
+    #             messagebox.showinfo("Success", f"File saved successfully at {self.file_manager.current_file_path}")
+    #         except Exception as e:
+    #             messagebox.showerror("Error", f"Failed to save file: {str(e)}")
 
     def save_file_as(self):
         file_path = filedialog.asksaveasfilename(
@@ -630,17 +641,8 @@ class KnowgentGUI:
     def on_open_node(self, event):
         selected_item = self.tree.selection()[0]
         full_path = self.get_full_path(selected_item)
+        print(full_path)
         self.process_directory(selected_item, full_path)
-
-    # def show_context_menu(self, event):
-    #     selected_item = self.tree.selection()
-    #     if not selected_item:
-    #         return
-        
-    #     context_menu = tk.Menu(self.root, tearoff=0)
-    #     context_menu.add_command(label="Rename", command=self.rename_file)
-    #     context_menu.add_command(label="Delete", command=self.delete_file)
-    #     context_menu.post(event.x_root, event.y_root)
     
     def show_context_menu(self, event):
         """显示右键上下文菜单"""
@@ -656,7 +658,7 @@ class KnowgentGUI:
         else:  # 如果是笔记本
             context_menu.add_command(label="Create Note", command=lambda: self.create_note(selected_item))  # 创建笔记选项
             context_menu.add_command(label="Rename Notebook", command=lambda: self.rename_notebook(selected_item))  # 重命名笔记本选项
-            context_menu.add_command(label="Delete Notebook", command=self.delete_notebook)
+            context_menu.add_command(label="Delete Notebook", command=lambda: self.delete_notebook(selected_item))  # 删除笔记本选项
         context_menu.post(event.x_root, event.y_root)
 
     def create_notebook(self):
@@ -672,7 +674,7 @@ class KnowgentGUI:
 
         # 调用后端服务创建 Notebook
         try:
-            success = self.notebook_service.create_notebook(base_path="MyNotebooks", notebook_name=notebook_name, description=description)
+            success = self.notebook_service.create_notebook(notebook_name=notebook_name, description=description)
             if success:
                 messagebox.showinfo("Success", f"Notebook '{notebook_name}' created successfully!")
                 self.populate_tree()  # 刷新树形结构
@@ -687,7 +689,7 @@ class KnowgentGUI:
         new_notebook_name = simpledialog.askstring("Rename Notebook", "Enter new notebook name:", initialvalue=old_notebook_name, parent=self.root)  # 弹窗输入新名称
         if new_notebook_name and new_notebook_name != old_notebook_name:
             try:
-                success = self.notebook_service.update_notebook(notebook_name=old_notebook_name, base_path="MyNotebooks", new_name=new_notebook_name)  # 调用后端服务重命名笔记本
+                success = self.notebook_service.update_notebook(notebook_name=old_notebook_name, new_name=new_notebook_name)  # 调用后端服务重命名笔记本
                 if success:
                     self.populate_tree()  # 刷新树形结构
                     messagebox.showinfo("Success", f"Notebook renamed to '{new_notebook_name}' successfully!")
@@ -696,8 +698,20 @@ class KnowgentGUI:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to rename notebook: {str(e)}")
 
-    def delete_notebook(self):
-        pass
+    def delete_notebook(self, notebook_item):
+        """删除笔记本及其所有笔记"""
+        notebook_name = self.tree.item(notebook_item, "text")  # 获取笔记本名称
+        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete notebook '{notebook_name}' and all its notes?"):
+            try:
+                # 调用后端服务删除笔记本
+                success = self.notebook_service.delete_notebook(notebook_name)
+                if success:
+                    self.populate_tree()  # 刷新树形结构
+                    messagebox.showinfo("Success", f"Notebook '{notebook_name}' and all its notes deleted successfully!")
+                else:
+                    messagebox.showerror("Error", f"Failed to delete notebook '{notebook_name}'.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete notebook: {str(e)}")
 
     # 添加创建笔记的逻辑。
     def create_note(self, notebook_item):
@@ -748,6 +762,30 @@ class KnowgentGUI:
                     messagebox.showinfo("Success", f"Note renamed to '{new_title}' successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to rename note: {str(e)}")
+
+    def save_note(self):
+        """
+        保存当前编辑区的内容到笔记
+        """
+        if not hasattr(self, 'current_notebook') or not hasattr(self, 'current_note'):
+            messagebox.showerror("Error", "No notebook or note selected.")
+            return
+
+        notebook_name = self.current_notebook
+        note_title = self.current_note
+        content = self.text_area.get(1.0, tk.END)  # 获取编辑区的内容
+
+        try:
+            # 获取笔记的文件路径
+            file_path = self.note_service.get_note_file_path(note_title, notebook_name)
+
+            # 保存内容到文件
+            if self.file_manager.save_file(content, file_path):
+                messagebox.showinfo("Success", f"Note '{note_title}' saved successfully!")
+            else:
+                messagebox.showerror("Error", f"Failed to save note '{note_title}'.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save note: {str(e)}")
 
 
     # def rename_file(self):
@@ -838,12 +876,9 @@ class KnowgentGUI:
             self.text_area.insert("1.0", updated_content)
 
     # ================= 悬浮按钮功能 ================= #
-    
-    
     def toggle_chat(self):
         self.chat_mode = not self.chat_mode
         if self.chat_mode:
             self.paned_window.add(self.chat_window,weight=5) # 显示左侧窗口
         else:
             self.paned_window.remove(self.chat_window) # 隐藏左侧窗口
-

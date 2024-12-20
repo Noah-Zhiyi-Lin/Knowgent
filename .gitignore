@@ -3,3 +3,4 @@ server/application/controllers
 .venv/
 __pycache__/
 *.pyc
+application/database/MyRepository.db
