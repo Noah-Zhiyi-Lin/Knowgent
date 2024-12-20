@@ -2,3 +2,4 @@
 server/application/controllers
 .venv/
 __pycache__/
+*.pyc
