@@ -45,12 +45,11 @@ class MenuBuilder:
         )
 
         # 文件菜单
-        file_menu.add_command(label="Open", command=self.gui.open_file, accelerator="Ctrl+O")
+    # 文件菜单
+        file_menu.add_command(label="Create Notebook", command=self.gui.create_notebook, accelerator="Ctrl+N")
+        file_menu.add_command(label="Create Note", command=self.gui.create_note_in_menu, accelerator="Ctrl+Shift+N")
         file_menu.add_command(label="Save", command=self.gui.save_note, accelerator="Ctrl+S")
-        file_menu.add_command(label="Save As", command=self.gui.save_file_as, accelerator="Ctrl+Shift+S")
-        file_menu.add_separator()
-        file_menu.add_command(label="Select Directory", command=self.gui.select_directory)  # 添加选择目录
-        file_menu.add_command(label="New File", command=self.gui.create_new_file)  # 添加新建文件
+        file_menu.add_command(label="Save As", command=self.gui.save_note_as, accelerator="Ctrl+Shift+S")
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit, accelerator="Ctrl+Q")
 
@@ -127,10 +126,13 @@ class MenuBuilder:
             self.gui.change_theme('Light')
 
     def bind_shortcuts(self):
-        self.root.bind('<Control-o>', lambda e: self.gui.open_file())
-        self.root.bind('<Control-s>', lambda e: self.gui.save_note())
-        self.root.bind('<Control-S>', lambda e: self.gui.save_file_as())
-        self.root.bind('<Control-q>', lambda e: self.root.quit())
+        self.root.bind('<Control-n>', lambda e: self.gui.create_notebook())  # 创建笔记本快捷键
+        self.root.bind('<Control-Shift-N>', lambda e: self.gui.create_note_in_menu())  # 创建笔记快捷键
+        self.root.bind('<Control-s>', lambda e: self.gui.save_note())  # 保存快捷键
+        self.root.bind('<Control-S>', lambda e: self.gui.save_note_as())  # 另存为快捷键
+        self.root.bind('<Control-q>', lambda e: self.root.quit())  # 退出快捷键
+        self.root.bind('<Delete>', lambda e: self.gui.delete_selected_item())   #删除快捷键
+
         self.root.bind('<Control-f>', lambda e: self.gui.find_text())
         self.root.bind('<Control-h>', lambda e: self.gui.replace_text())
         self.root.bind('<Control-a>', lambda e: self.gui.select_all())

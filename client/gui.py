@@ -6,6 +6,7 @@ from tkinterweb import HtmlFrame
 from .menu_builder import MenuBuilder
 from .file_manager import FileManager
 from .text_processor import TextProcessor
+from .notebookselect import NotebookSelectionDialog
 from .llm import llmagent
 from server.application.services.notebook_service import NotebookService
 from server.application.services.note_service import NoteService
@@ -19,6 +20,11 @@ class KnowgentGUI:
         self.chat_mode=False
         self.button_offset_x=0, 
         self.button_offset_y=0
+        
+        #当前打开的笔记/笔记本
+        self.current_notebook = None
+        self.current_note = None
+
         # 初始化后端服务
         self.notebook_service = NotebookService(db, base_path="MyNotebooks")  # 初始化 NotebookService
         self.note_service = NoteService(db)  # 初始化 NoteService
@@ -310,9 +316,7 @@ class KnowgentGUI:
                                     )
         self.chat_button.tkraise()
         self.chat_button.pack(side=tk.RIGHT, padx=30, pady=30)
-        self.root.bind('<Control-k>', lambda e:self.toggle_chat())
-
-        
+        self.root.bind('<Control-k>', lambda e:self.toggle_chat())        
 
         # 创建预览区
         self.preview_frame = ttk.Frame(self.paned_window, style='Custom.TFrame')
@@ -568,28 +572,28 @@ class KnowgentGUI:
         """
         self.preview_area.load_html(styled_html)
 
-    def open_file(self, file_path=None):
-        if not file_path:
-            file_path = filedialog.askopenfilename(
-                filetypes=[
-                    ("Markdown Files", "*.md *.markdown"),
-                    ("Text Files", "*.txt"),
-                    ("All Files", "*.*")
-                ]
-            )
+    # def open_file(self, file_path=None):
+    #     if not file_path:
+    #         file_path = filedialog.askopenfilename(
+    #             filetypes=[
+    #                 ("Markdown Files", "*.md *.markdown"),
+    #                 ("Text Files", "*.txt"),
+    #                 ("All Files", "*.*")
+    #             ]
+    #         )
         
-        if file_path:
-            content = self.file_manager.read_file(file_path)
-            if content is not None:
-                self.text_area.delete(1.0, tk.END)
-                self.text_area.insert(tk.END, content)
-                self.root.title(f"Knowgent - {file_path}")
+    #     if file_path:
+    #         content = self.file_manager.read_file(file_path)
+    #         if content is not None:
+    #             self.text_area.delete(1.0, tk.END)
+    #             self.text_area.insert(tk.END, content)
+    #             self.root.title(f"Knowgent - {file_path}")
                 
-                # 如果是markdown文件，自动启用markdown模式
-                if file_path.lower().endswith(('.md', '.markdown')) and not self.markdown_mode:
-                    self.toggle_markdown_preview()
-                elif self.markdown_mode:
-                    self.update_preview()
+    #             # 如果是markdown文件，自动启用markdown模式
+    #             if file_path.lower().endswith(('.md', '.markdown')) and not self.markdown_mode:
+    #                 self.toggle_markdown_preview()
+    #             elif self.markdown_mode:
+    #                 self.update_preview()
 
     # def save_file(self):
     #     """保存当前编辑区的内容到文件"""
@@ -603,19 +607,19 @@ class KnowgentGUI:
     #         except Exception as e:
     #             messagebox.showerror("Error", f"Failed to save file: {str(e)}")
 
-    def save_file_as(self):
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".md",
-            filetypes=[
-                ("Markdown Files", "*.md *.markdown"),
-                ("Text Files", "*.txt"),
-                ("All Files", "*.*")
-            ]
-        )
-        if file_path:
-            content = self.text_area.get(1.0, tk.END)
-            if self.file_manager.save_file(content, file_path):
-                self.root.title(f"Knowgent - {file_path}")
+    # def save_file_as(self):
+    #     file_path = filedialog.asksaveasfilename(
+    #         defaultextension=".md",
+    #         filetypes=[
+    #             ("Markdown Files", "*.md *.markdown"),
+    #             ("Text Files", "*.txt"),
+    #             ("All Files", "*.*")
+    #         ]
+    #     )
+    #     if file_path:
+    #         content = self.text_area.get(1.0, tk.END)
+    #         if self.file_manager.save_file(content, file_path):
+    #             self.root.title(f"Knowgent - {file_path}")
 
     def create_new_file(self):
         selected_item = self.tree.selection()
@@ -661,12 +665,28 @@ class KnowgentGUI:
             context_menu.add_command(label="Delete Notebook", command=lambda: self.delete_notebook(selected_item))  # 删除笔记本选项
         context_menu.post(event.x_root, event.y_root)
 
+    def delete_selected_item(self, event=None):
+        """
+        删除选中的笔记本或笔记
+        """
+        selected_item = self.tree.selection()
+        if not selected_item:
+            # messagebox.showwarning("No Selection", "Please select a notebook or note to delete.")
+            return
+
+        item_type = self.tree.parent(selected_item[0])  # 判断是笔记本还是笔记
+
+        if item_type:  # 如果是笔记
+            self.delete_note()  # 调用删除笔记的函数
+        else:  # 如果是笔记本
+            self.delete_notebook(selected_item)  # 调用删除笔记本的函数
+
     def create_notebook(self):
         """创建新的 Notebook"""
         # 弹出对话框，输入 Notebook 名称（必填）
         notebook_name = simpledialog.askstring("Create Notebook", "Enter the name of the new notebook:", parent=self.root)
         if not notebook_name:
-            messagebox.showwarning("Warning", "Notebook name is required. Operation cancelled.")
+            # messagebox.showwarning("Warning", "Notebook name is required. Operation cancelled.")
             return
 
         # 弹出对话框，输入 Notebook 描述（选填）
@@ -705,6 +725,7 @@ class KnowgentGUI:
             try:
                 # 调用后端服务删除笔记本
                 success = self.notebook_service.delete_notebook(notebook_name)
+                print(success)
                 if success:
                     self.populate_tree()  # 刷新树形结构
                     messagebox.showinfo("Success", f"Notebook '{notebook_name}' and all its notes deleted successfully!")
@@ -713,7 +734,7 @@ class KnowgentGUI:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete notebook: {str(e)}")
 
-    # 添加创建笔记的逻辑。
+    # 右键创建笔记
     def create_note(self, notebook_item):
         """创建新笔记"""
         notebook_name = self.tree.item(notebook_item, "text")  # 获取笔记本名称
@@ -726,6 +747,20 @@ class KnowgentGUI:
                     messagebox.showinfo("Success", f"Note '{note_title}' created successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to create note: {str(e)}")
+
+    # 在菜单栏中创建笔记
+    def create_note_in_menu(self):
+        notebook_name = NotebookSelectionDialog.select_notebook(self.root, self.notebook_service)
+        if notebook_name:
+            note_title = simpledialog.askstring("Create Note", "Enter note title:", parent=self.root)
+            if note_title:
+                try:
+                    success = self.note_service.create_note(note_title, notebook_name)
+                    if success:
+                        self.populate_tree()
+                        messagebox.showinfo("Success", f"Note '{note_title}' created successfully!")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to create note: {str(e)}")
 
     def delete_note(self):
         selected_item = self.tree.selection()
@@ -741,9 +776,13 @@ class KnowgentGUI:
                 if success:
                     self.populate_tree()  # 刷新树形结构
                     messagebox.showinfo("Success", f"Note '{note_title}' deleted successfully!")
+                    # 被删除的笔记是正在编辑区的笔记
+                    if self.current_note == note_title and self.current_notebook == notebook_name:
+                        self.text_area.delete(1.0, tk.END)  # 清空编辑区
+                        self.current_notebook = None  # 重置当前笔记本
+                        self.current_note = None  # 重置当前笔记
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete note: {str(e)}")
-
 
     def rename_note(self):
         selected_item = self.tree.selection()
@@ -767,8 +806,9 @@ class KnowgentGUI:
         """
         保存当前编辑区的内容到笔记
         """
-        if not hasattr(self, 'current_notebook') or not hasattr(self, 'current_note'):
-            messagebox.showerror("Error", "No notebook or note selected.")
+        if not self.current_note:
+            # 如果没有打开的笔记，调用 save_note_as 函数
+            self.save_note_as()
             return
 
         notebook_name = self.current_notebook
@@ -787,51 +827,44 @@ class KnowgentGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save note: {str(e)}")
 
+    def save_note_as(self):
+        """
+        保存当前编辑区的内容为一个新的笔记
+        """
+        # 弹出笔记本选择对话框，获取用户选择的笔记本名称
+        notebook_name = NotebookSelectionDialog.select_notebook(self.root, self.notebook_service)
+        if not notebook_name:
+            messagebox.showinfo("Info", "No notebook selected. Operation cancelled.")
+            return
 
-    # def rename_file(self):
-    #     selected_item = self.tree.selection()
-    #     if not selected_item:
-    #         messagebox.showerror("Error", "Please select a file or directory.")
-    #         return
+        # 弹出对话框，输入新的笔记标题
+        note_title = simpledialog.askstring("Save Note As", "Enter the title for the new note:", parent=self.root)
+        if not note_title:
+            messagebox.showinfo("Info", "Note title is required. Operation cancelled.")
+            return
 
-    #     old_name = self.tree.item(selected_item[0], "text")
-    #     new_name = simpledialog.askstring("Rename", "Enter new name:", initialvalue=old_name)
-    #     if new_name:
-    #         full_path = self.get_full_path(selected_item[0])
-    #         new_full_path = os.path.join(os.path.dirname(full_path), new_name)
+        # 获取当前编辑区的内容
+        content = self.text_area.get(1.0, tk.END)
 
-    #         if self.file_manager.rename_file(full_path, new_full_path):
-    #             self.tree.item(selected_item[0], text=new_name)
-    #             messagebox.showinfo("Success", "File renamed successfully!")
+        try:
+            # 在选定的笔记本中创建新的笔记
+            success = self.note_service.create_note(note_title, notebook_name)
+            if success:
+                # 获取新笔记的文件路径
+                file_path = self.note_service.get_note_file_path(note_title, notebook_name)
 
-    # def delete_file(self):
-    #     """处理文件删除的前端逻辑"""
-    #     selected_item = self.tree.selection()
-    #     if not selected_item:
-    #         messagebox.showerror("Error", "Please select a file or directory.")
-    #         return
-
-    #     full_path = self.get_full_path(selected_item[0])
-    #     item_name = self.tree.item(selected_item[0], "text")
-        
-    #     # 确认删除
-    #     if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete '{item_name}'?"):
-    #         # 调用后端删除方法
-    #         success, error_msg = self.file_manager.delete_file(full_path)
-            
-    #         if success:
-    #             # 从树形视图中移除节点
-    #             self.tree.delete(selected_item[0])
-    #             messagebox.showinfo("Success", f"'{item_name}' has been deleted successfully!")
-                
-    #             # 如果当前打开的文件被删除，清空编辑器
-    #             if hasattr(self.file_manager, 'current_file_path') and \
-    #                self.file_manager.current_file_path == full_path:
-    #                 self.text_area.delete("1.0", tk.END)
-    #                 self.root.title("Knowgent")
-    #                 self.file_manager.current_file_path = None
-    #         else:
-    #             messagebox.showerror("Error", f"Failed to delete: {error_msg}")
+                # 保存内容到文件
+                if self.file_manager.save_file(content, file_path):
+                    messagebox.showinfo("Success", f"Note '{note_title}' saved successfully in notebook '{notebook_name}'!")
+                    self.current_notebook = notebook_name
+                    self.current_note = note_title
+                    self.populate_tree()  # 刷新树形结构
+                else:
+                    messagebox.showerror("Error", f"Failed to save note '{note_title}'.")
+            else:
+                messagebox.showerror("Error", f"Failed to create note '{note_title}' in notebook '{notebook_name}'.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save note: {str(e)}")
 
     def cut_text(self):
         self.copy_text()
