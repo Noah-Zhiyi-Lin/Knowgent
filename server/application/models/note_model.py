@@ -157,7 +157,7 @@ class NoteModel:
                     updates.append(" title = ?")
                     params.append(new_title)
                 if new_path:
-                    updates.append(" path = ?")
+                    updates.append(" file_path = ?")
                     params.append(new_path)
                 # Use get_id_by_name() in NotebookModel to get id of a notebook
                 if new_notebook_id:
