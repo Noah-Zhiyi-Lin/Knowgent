@@ -33,7 +33,7 @@ class llmagent:
                 self.hint_label.grid(row=1, column=1, padx=0, pady=10, sticky="w") 
 
         menu_title=tk.StringVar()
-        on_person_selected(self.bots[0])
+        menu_title.set("My model")
 
         dropdown_button = tk.Menubutton(chat_frame, textvariable=menu_title, justify='left', font=("Arial", 12), bg="#DEDEDE", fg="black", relief="flat")
         dropdown_button.pack(side=tk.TOP, fill=tk.BOTH, pady=10, padx=10)
