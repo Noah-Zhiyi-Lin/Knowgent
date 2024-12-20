@@ -106,7 +106,7 @@ class Database:
                 id INTEGER PRIMARY KEY,
                 notebook_name TEXT NOT NULL UNIQUE,
                 notebook_path TEXT NOT NULL UNIQUE,
-                description TEXT UNIQUE,
+                description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
