@@ -49,51 +49,65 @@ class llmagent:
         # 滚动条
         scrollbar = ttk.Scrollbar(chat_frame, orient="vertical")
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
+        h_scrollbar = ttk.Scrollbar(chat_frame, orient="horizontal")
+        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         # Canvas实现滚动
-        self.chat_canvas = tk.Canvas(chat_frame, bg="white", yscrollcommand=scrollbar.set, highlightthickness=0)
+        self.chat_canvas = tk.Canvas(chat_frame, bg="white",xscrollcommand=h_scrollbar.set, yscrollcommand=scrollbar.set, highlightthickness=0)
         self.chat_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=self.chat_canvas.yview)
+        
+        def on_mouse_wheel(event):
+        # 实现鼠标滚轮滚动效果
+            self.chat_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        def on_shift_mouse_wheel(event):
+        # 按住Shift时，鼠标滚轮进行水平滚动
+            self.chat_canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        self.chat_canvas.bind_all("<Shift-MouseWheel>", on_shift_mouse_wheel)  # 按住Shift + 滚轮进行水平滚动
+        self.chat_canvas.bind_all("<MouseWheel>", on_mouse_wheel)   # Windows
+        
 
         # 在Canvas上创建一个Frame来容纳消息内容
         self.chat_frame_inner = tk.Frame(self.chat_canvas, bg="white")
         chat_window = self.chat_canvas.create_window((0, 0), window=self.chat_frame_inner, anchor="nw")
 
-        def resize_chat_frame(event):
+        def on_frame_configure(event):
+        # 更新Canvas的滚动区域大小
+            self.chat_canvas.config(scrollregion=self.chat_canvas.bbox("all"))
             self.chat_canvas.itemconfig(chat_window, width=event.width)
-
-        self.chat_canvas.bind("<Configure>", resize_chat_frame)
+        
+        self.chat_frame_inner.bind("<Configure>", on_frame_configure)
 
         # 更新Canvas大小
         def update_scroll_region(event):
             self.chat_canvas.configure(scrollregion=self.chat_canvas.bbox("all"))
 
         self.chat_frame_inner.bind("<Configure>", update_scroll_region)
-
+        
         # ================= 输入框区域 ================= #
         self.input_frame = tk.Frame(self.chat, bg="#DEDEDE", height=80, highlightbackground='white',highlightthickness=2)
         self.input_frame.pack(side=tk.BOTTOM, fill='both')
 
 
         # 使用grid布局管理输入框和按钮
-        placeholder='Ask me anything'
+        self.placeholder='Ask me anything'
         self.input_entry = tk.Entry(self.input_frame, font=("等线", 12), relief="flat", bg="#DEDEDE",fg="#8F8F8F")
         self.input_entry.grid(row=0, column=0, padx=10, pady=10, columnspan=3,sticky="ew")
         def on_focus_in(event):
-            if self.input_entry.get() == placeholder:
+            if self.input_entry.get() == self.placeholder:
                 self.input_entry.delete('0', tk.END)  # 清空输入框
                 self.input_entry.config(fg="black")  # 设置输入文字颜色为黑色
 
         def on_focus_out(event):
             if not self.input_entry.get():  # 输入框为空时显示提示文字
-                self.input_entry.insert(tk.END, placeholder)
+                self.input_entry.insert(tk.END, self.placeholder)
                 self.input_entry.config(fg="#8F8F8F")  # 设置提示文字颜色为灰色
 
         # 绑定事件
         self.input_entry.bind("<FocusIn>", on_focus_in)
         self.input_entry.bind("<FocusOut>", on_focus_out)
         
-        self.input_entry.insert(tk.END, placeholder)  # 初始显示提示文字
+        self.input_entry.insert(tk.END, self.placeholder)  # 初始显示提示文字
         def on_enter_press(event):
             self.send_message()
             return "break"  # 阻止默认的换行行为
@@ -219,7 +233,8 @@ class llmagent:
     def new_chat(self):
         for widget in self.chat_frame_inner.winfo_children():
             widget.destroy()
-        self.input_entry.delete("0", tk.END)
+        if self.input_entry.get() and not self.input_entry.get() == self.placeholder:
+            self.input_entry.delete('0',tk.END)
         self.image_path = None
         self.Ollama.clear_chat_history()
         if self.hint_label:
