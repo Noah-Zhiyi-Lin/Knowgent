@@ -19,21 +19,29 @@ class llmagent:
         chat_frame = tk.Frame(self.chat, bg="white")
         chat_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        # 添加 OptionMenu 下拉菜单
-        def on_person_selected(bot):
-            menu_title.set(bot)
-            print("pulling model")
+        
+        menu_title=tk.StringVar()
+        menu_title.set("My model")
+
+        def check_and_pull(bot):
+            self.botstate=False
+            self.send_button.config(state='disabled')
             self.botstate=self.Ollama.pull(bot)
-            print("pulled successfully")
             if self.botstate:
                 self.model_name = bot
+                self.send_button.config(state='normal')
             else:
                 self.send_button.config(state='disabled')
                 self.hint_label = tk.Label(self.input_frame, text="This model is not available! ", font=("Arial", 12), fg="#8F8F8F", bg="#DEDEDE")
                 self.hint_label.grid(row=1, column=1, padx=0, pady=10, sticky="w") 
 
-        menu_title=tk.StringVar()
-        menu_title.set("My model")
+        # 添加 OptionMenu 下拉菜单
+        def on_person_selected(bot):
+            menu_title.set(bot)
+            print("pulling model")
+            thread = threading.Thread(target=check_and_pull, args=(bot,))
+            thread.start()
+            
 
         dropdown_button = tk.Menubutton(chat_frame, textvariable=menu_title, justify='left', font=("Arial", 12), bg="#DEDEDE", fg="black", relief="flat")
         dropdown_button.pack(side=tk.TOP, fill=tk.BOTH, pady=10, padx=10)
@@ -109,8 +117,9 @@ class llmagent:
         
         self.input_entry.insert(tk.END, self.placeholder)  # 初始显示提示文字
         def on_enter_press(event):
-            self.send_message()
-            return "break"  # 阻止默认的换行行为
+            if self.botstate:
+                self.send_message()
+                return "break"  # 阻止默认的换行行为
 
         self.input_entry.bind("<Return>", on_enter_press)  
 
@@ -118,6 +127,7 @@ class llmagent:
         self.send_button = tk.Button(self.input_frame, image=send_icon, bg="#DEDEDE",command=self.send_message, relief='flat')
         self.send_button.grid(row=0, column=3, padx=10, pady=10, sticky="e")
         self.send_button.image = send_icon
+        self.send_button.config(state='disabled')
 
         image_icon = PhotoImage(file="./client/src/clip.png")
         image_button = tk.Button(self.input_frame, image=image_icon, bg="#DEDEDE",command=self.upload_image, relief='flat')
