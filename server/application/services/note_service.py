@@ -97,39 +97,102 @@ class NoteService:
     #         return self.note_model.get_note(note_id)
     #     except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
     #         raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
+
+    def get_note_file_path(self, title, notebook_name):
+        """
+        获取笔记的文件路径
+        :param title: 笔记的标题
+        :param notebook_name: 笔记本的名称
+        :raises NoteError: 如果获取文件路径失败
+        :return: 笔记的文件路径
+        """
+        try:
+            # 获取笔记本的 ID
+            notebook = self.notebook_service.get_notebook(notebook_name)
+            notebook_id = notebook["id"]
+
+            # 获取笔记的 ID
+            note_id = self.note_model.get_note_id(title, notebook_id)
+
+            # 获取笔记的详细信息
+            note_tuple = self.note_model.get_note(note_id)
+
+            # 将元组转换为字典
+            note_dict = {
+                'id': note_tuple[0],
+                'title': note_tuple[1],
+                'file_path': note_tuple[2],
+                'notebook_id': note_tuple[3],
+                'created_at': note_tuple[4],
+                'updated_at': note_tuple[5]
+            }
+
+            # 返回笔记的文件路径
+            return note_dict["file_path"]
+        except (NotebookError, NoteNotFoundError, DatabaseError, Exception) as e:
+            raise NoteError(f"Failed to get file path for note {title} in notebook {notebook_name}: {str(e)}")
     
+    # def get_note_content(self, title, notebook_name):
+    #     """
+    #     Get the content of a note
+    #     :param title: title of the note
+    #     :param notebook_name: name of the notebook which the note belongs to
+    #     :raises NoteError: if retrieval fails
+    #     :return: content of the note
+    #     """
+    #     try:
+    #         # Try to get the path of the note file
+    #         try:
+    #             note_dict = self.get_note(title, notebook_name)
+    #         except NoteError as e:
+    #             raise e
+    #         file_path = note_dict["file_path"]
+
+    #         # Check whether the file exists
+    #         if not Path(file_path).exists():
+    #             raise FileSystemError(
+    #                 f"File of note {title} in notebook {notebook_name} does not exist: {file_path}"
+    #             )
+
+    #         # Try to read the note file
+    #         try:
+    #             with open(file_path, "r", encoding="utf-8") as file:
+    #                 return file.read()
+    #         except IOError as e:
+    #             raise FileSystemError(
+    #                 f"Failed to read the file of note {title} in notebook {notebook_name}: {str(e)}"
+    #             )
+    #     except (NoteError, FileSystemError, Exception) as e:
+    #         raise NoteError(
+    #             f"Failed to get the content of note {title} in notebook {notebook_name}: {str(e)}"
+    #         )
     def get_note_content(self, title, notebook_name):
         """
-        Get the content of a note
-        :param title: title of the note
-        :param notebook_name: name of the notebook which the note belongs to
-        :raises NoteError: if retrieval fails
-        :return: content of the note
+        获取笔记的内容
+        :param title: 笔记的标题
+        :param notebook_name: 笔记本的名称
+        :raises NoteError: 如果获取内容失败
+        :return: 笔记的内容
         """
         try:
             # Try to get the path of the note file
-            try:
-                note = self.get_note(title, notebook_name)
-            except NoteError as e:
-                raise e
-            file_path = note["file_path"]
+            file_path = self.get_note_file_path(title, notebook_name)
+
             # Check whether the file exists
             if not Path(file_path).exists():
-                raise FileSystemError(
-                    f"File of note {title} in notebook {notebook_name} does not exist: {file_path}"
-                )
+                raise FileSystemError(f"File of note {title} in notebook {notebook_name} does not exist: {file_path}")
+
             # Try to read the note file
-            try:
-                with open(file_path, "r") as file:
-                    return file.read()
-            except IOError as e:
-                raise FileSystemError(
-                    f"Failed to read the file of note {title} in notebook {notebook_name}: {str(e)}"
-                )
+            # with open(file_path, "r", encoding="utf-8") as file:
+            with open(file_path, "r") as file:
+                content = file.read()
+
+            if not content:
+                return ""
+
+            return content
         except (NoteError, FileSystemError, Exception) as e:
-            raise NoteError(
-                f"Failed to get the content of note {title} in notebook {notebook_name}: {str(e)}"
-            )
+            raise NoteError(f"Failed to get the content of note {title} in notebook {notebook_name}: {str(e)}")
     
     def update_note(self, title, notebook_name, new_title = None, new_notebook_name = None):
         """
@@ -150,6 +213,7 @@ class NoteService:
             note_id = note["id"]
             current_file_path = Path(note['file_path'])
             new_file_path = None
+            new_notebook_id = None
             # Handle notebook transfer
             if new_notebook_name:
                 # Try to get the new notebook
@@ -289,13 +353,12 @@ class NoteService:
             # Try to get notebook_id
             try:
                 notebook = self.notebook_service.get_notebook(notebook_name)
-                print(notebook)
             except NotebookError as e:
                 raise e
+            
             notebook_id = notebook["id"]
-            note_id = self.note_model.get_note_id(title, notebook_id)
+            note_id = self.note_model.get_note_id(title, notebook_id)   # error occourred
             note_tuple = self.note_model.get_note(note_id)
-
             # 将元组转换为字典
             note_dict = {
                 'id': note_tuple[0],
@@ -305,7 +368,6 @@ class NoteService:
                 'created_at': note_tuple[4],
                 'updated_at': note_tuple[5]
             }
-
             return note_dict
         except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
             raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")

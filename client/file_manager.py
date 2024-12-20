@@ -25,7 +25,7 @@ class FileManager:
             with open(save_path, 'w') as file:
                 file.write(content)
             self.current_file_path = save_path
-            messagebox.showinfo("Success", f"File saved successfully at {save_path}")
+            # messagebox.showinfo("Success", f"File saved successfully at {save_path}")
             return True
         except Exception as e:
             messagebox.showerror("Error", f"Could not save file: {e}")

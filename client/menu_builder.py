@@ -46,7 +46,7 @@ class MenuBuilder:
 
         # 文件菜单
         file_menu.add_command(label="Open", command=self.gui.open_file, accelerator="Ctrl+O")
-        file_menu.add_command(label="Save", command=self.gui.save_file, accelerator="Ctrl+S")
+        file_menu.add_command(label="Save", command=self.gui.save_note, accelerator="Ctrl+S")
         file_menu.add_command(label="Save As", command=self.gui.save_file_as, accelerator="Ctrl+Shift+S")
         file_menu.add_separator()
         file_menu.add_command(label="Select Directory", command=self.gui.select_directory)  # 添加选择目录
@@ -128,7 +128,7 @@ class MenuBuilder:
 
     def bind_shortcuts(self):
         self.root.bind('<Control-o>', lambda e: self.gui.open_file())
-        self.root.bind('<Control-s>', lambda e: self.gui.save_file())
+        self.root.bind('<Control-s>', lambda e: self.gui.save_note())
         self.root.bind('<Control-S>', lambda e: self.gui.save_file_as())
         self.root.bind('<Control-q>', lambda e: self.root.quit())
         self.root.bind('<Control-f>', lambda e: self.gui.find_text())
