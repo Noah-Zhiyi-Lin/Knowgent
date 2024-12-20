@@ -43,7 +43,7 @@ class NotebookModel:
                 self.db.execute(sql, params)
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint" in str(e):
-                raise DuplicateNotebookError(f"Note book with name {notebook_name} already exists")
+                raise DuplicateNotebookError(f"Note book with name {notebook_name} already exists: {str(e)}")
             raise DatabaseError(f"Failed to create notebook: {str(e)}")
         except (DatabaseError, sqlite3.Error, Exception) as e:
             raise DatabaseError(f"Failed to create notebook: {str(e)}")
