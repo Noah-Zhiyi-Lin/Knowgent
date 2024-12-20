@@ -28,17 +28,16 @@ class llmagent:
             self.send_button.config(state='disabled')
             self.botstate=self.Ollama.pull(bot)
             if self.botstate:
+                menu_title.set(bot)
                 self.model_name = bot
                 self.send_button.config(state='normal')
             else:
+                menu_title.set(f"{bot}:unavailable")
                 self.send_button.config(state='disabled')
-                self.hint_label = tk.Label(self.input_frame, text="This model is not available! ", font=("Arial", 12), fg="#8F8F8F", bg="#DEDEDE")
-                self.hint_label.grid(row=1, column=1, padx=0, pady=10, sticky="w") 
 
         # 添加 OptionMenu 下拉菜单
         def on_person_selected(bot):
-            menu_title.set(bot)
-            print("pulling model")
+            menu_title.set("pulling model...")
             thread = threading.Thread(target=check_and_pull, args=(bot,))
             thread.start()
             
