@@ -4,3 +4,4 @@ server/application/controllers
 __pycache__/
 *.pyc
 application/database/MyRepository.db
+MyNotebooks/

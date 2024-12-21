@@ -102,15 +102,25 @@ class NotebookService:
                     raise ValidationError("New notebook name must be different from the current notebook name")
                 current_path = Path(self.__base_path) / notebook_name
                 new_path = Path(self.__base_path) / new_name
-                if current_path.exists():
+            try:
+                # Update notebook in the database
+                self.notebook_model.update_notebook(
+                    notebook_id = notebook_id,
+                    new_name = new_name,
+                    new_path = str(new_path) if new_path else None,
+                    new_description = new_description
+                )
+                # Change notebook path if new path is given
+                if new_path:
                     current_path.rename(new_path)
-            self.notebook_model.update_notebook(
-                notebook_id = notebook_id,
-                new_name = new_name,
-                new_path = str(new_path) if new_path else None,
-                new_description = new_description
-            )
-            return True
+                return True
+            except (
+                ValidationError,
+                NotebookNotFoundError,
+                DuplicateNotebookError,
+                DatabaseError,
+            ) as e:
+                raise e
         except (ValidationError, 
                 NotebookNotFoundError,
                 DuplicateNotebookError,

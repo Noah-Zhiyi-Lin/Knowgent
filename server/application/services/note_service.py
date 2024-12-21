@@ -230,30 +230,31 @@ class NoteService:
             # Handle title change
             elif new_title:
                 new_file_path = current_file_path.parent / f"{new_title}.md"
-            # Move note file if file path is changed
-            if new_file_path:
-                # Check whether the target file exists
-                if new_file_path.exists():
-                    raise FileSystemError(f"Note file already exists: {new_file_path}")
-                # Try to move the note file
-                try:
-                    current_file_path.rename(new_file_path)
-                except Exception as e:
-                    raise FileSystemError(f"Failed to move note file: {str(e)}")
             # Update note in the database
             try:
                 self.note_model.update_note(
                     note_id = note_id,
                     new_title = new_title if new_title else None,
-                    new_path = new_file_path if new_file_path else None,
+                    new_path = str(new_file_path) if new_file_path else None,
                     new_notebook_id = new_notebook_id if new_notebook_id else None
                 )
+                # Move note file if file path is changed
+                if new_file_path:
+                    # Check whether the target file exists
+                    if new_file_path.exists():
+                        raise FileSystemError(f"Note file already exists: {new_file_path}")
+                    # Try to move the note file
+                    try:
+                        current_file_path.rename(new_file_path)
+                    except Exception as e:
+                        raise FileSystemError(f"Failed to move note file: {str(e)}")
                 return True
             except (
                 ValidationError,
                 NotebookNotFoundError,
                 DuplicateNoteError,
                 DatabaseError,
+                FileSystemError,
                 Exception
             ) as e:
                 raise e
