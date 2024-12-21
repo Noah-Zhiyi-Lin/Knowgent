@@ -345,7 +345,7 @@ class KnowgentGUI:
         button.tkraise()
     
     def create_file_browser(self):
-        # 添加“创建 Notebook”按钮
+        # 添加"创建 Notebook"按钮
         create_notebook_button = ttk.Button(
             self.file_browser_frame,
             text="Create Notebook",
@@ -723,16 +723,17 @@ class KnowgentGUI:
         notebook_name = self.tree.item(notebook_item, "text")  # 获取笔记本名称
         if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete notebook '{notebook_name}' and all its notes?"):
             try:
-                # 调用后端服务删除笔记本
-                success = self.notebook_service.delete_notebook(notebook_name)
-                print(success)
-                if success:
-                    self.populate_tree()  # 刷新树形结构
-                    messagebox.showinfo("Success", f"Notebook '{notebook_name}' and all its notes deleted successfully!")
-                else:
-                    messagebox.showerror("Error", f"Failed to delete notebook '{notebook_name}'.")
+                # 获取该笔记本下的所有笔记
+                notes = self.note_service.get_all_notes_in_notebook(notebook_name)  # 获取所有笔记
+                for note in notes:
+                    self.note_service.delete_note(note['title'], notebook_name)  # 删除每个笔记
+                
+                # 删除笔记本
+                self.notebook_service.delete_notebook(notebook_name)
+                self.populate_tree()  # 刷新树形结构
+                messagebox.showinfo("Success", f"Notebook '{notebook_name}' and all its notes deleted successfully!")
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to delete notebook: {str(e)}")
+                messagebox.showerror("Error", f"Failed to delete notebook '{notebook_name}': {str(e)}")
 
     # 右键创建笔记
     def create_note(self, notebook_item):
