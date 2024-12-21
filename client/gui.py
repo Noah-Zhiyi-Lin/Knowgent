@@ -4,7 +4,6 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 from tkinterweb import HtmlFrame
 from .menu_builder import MenuBuilder
-from .file_manager import FileManager
 from .text_processor import TextProcessor
 from .notebookselect import NotebookSelectionDialog
 from .llm import llmagent
@@ -14,7 +13,6 @@ from server.application.services.note_service import NoteService
 class KnowgentGUI:
     def __init__(self, root, db):
         self.root = root
-        self.file_manager = FileManager()
         self.text_processor = TextProcessor()
         self.markdown_mode = False
         self.chat_mode=False
@@ -383,24 +381,11 @@ class KnowgentGUI:
 
         # 绑定事件
         self.tree.bind("<Double-1>", self.on_double_click)
-        self.tree.bind("<<TreeviewOpen>>", self.on_open_node)
         self.tree.bind("<Button-3>", self.show_context_menu)
-
-        # path = Path(__file__).parent.parent / "MyRepository"
-        # # 检查路径是否存在，如果不存在则创建
-        # if not path.exists():
-        #     path.mkdir(parents=True)
-        # # 初始化目录
-        # self.populate_tree(os.path.expanduser(Path(__file__).parent.parent / "MyRepository"))
 
         # 初始化笔记本和笔记
         self.populate_tree()
 
-
-    # def populate_tree(self, path):
-    #     self.tree.delete(*self.tree.get_children())
-    #     root_node = self.tree.insert("", "end", text=path, open=True)
-    #     self.process_directory(root_node, path)
 
     def populate_tree(self):
         self.tree.delete(*self.tree.get_children())
@@ -412,28 +397,7 @@ class KnowgentGUI:
             notes = self.note_service.get_all_notes_in_notebook(notebook['notebook_name'])
             for note in notes:
                 self.tree.insert(notebook_node, "end", text=note['title'], open=False)
-        
 
-    def process_directory(self, parent_node, path):
-        try:
-            self.tree.delete(*self.tree.get_children(parent_node))
-            items = self.file_manager.get_directory_contents(path)
-            for item in items:
-                full_path = os.path.join(path, item)
-                is_directory = self.file_manager.is_directory(full_path)
-
-                node = self.tree.insert(parent_node, "end", text=item, open=False)
-                if is_directory:
-                    self.tree.insert(node, "end", text="Loading...")
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not load directory: {e}")
-
-    def get_full_path(self, item):
-        path_parts = []
-        while item:
-            path_parts.insert(0, self.tree.item(item, "text"))
-            item = self.tree.parent(item)
-        return os.path.join(*path_parts)
 
     def on_double_click(self, event):
         """
@@ -572,81 +536,6 @@ class KnowgentGUI:
         """
         self.preview_area.load_html(styled_html)
 
-    # def open_file(self, file_path=None):
-    #     if not file_path:
-    #         file_path = filedialog.askopenfilename(
-    #             filetypes=[
-    #                 ("Markdown Files", "*.md *.markdown"),
-    #                 ("Text Files", "*.txt"),
-    #                 ("All Files", "*.*")
-    #             ]
-    #         )
-        
-    #     if file_path:
-    #         content = self.file_manager.read_file(file_path)
-    #         if content is not None:
-    #             self.text_area.delete(1.0, tk.END)
-    #             self.text_area.insert(tk.END, content)
-    #             self.root.title(f"Knowgent - {file_path}")
-                
-    #             # 如果是markdown文件，自动启用markdown模式
-    #             if file_path.lower().endswith(('.md', '.markdown')) and not self.markdown_mode:
-    #                 self.toggle_markdown_preview()
-    #             elif self.markdown_mode:
-    #                 self.update_preview()
-
-    # def save_file(self):
-    #     """保存当前编辑区的内容到文件"""
-    #     content = self.text_area.get(1.0, tk.END)  # 获取编辑区的内容
-    #     if not self.file_manager.current_file_path:
-    #         self.save_file_as()  # 如果没有当前文件路径，调用另存为
-    #     else:
-    #         try:
-    #             self.file_manager.save_file(content, self.file_manager.current_file_path)  # 保存内容到文件
-    #             messagebox.showinfo("Success", f"File saved successfully at {self.file_manager.current_file_path}")
-    #         except Exception as e:
-    #             messagebox.showerror("Error", f"Failed to save file: {str(e)}")
-
-    # def save_file_as(self):
-    #     file_path = filedialog.asksaveasfilename(
-    #         defaultextension=".md",
-    #         filetypes=[
-    #             ("Markdown Files", "*.md *.markdown"),
-    #             ("Text Files", "*.txt"),
-    #             ("All Files", "*.*")
-    #         ]
-    #     )
-    #     if file_path:
-    #         content = self.text_area.get(1.0, tk.END)
-    #         if self.file_manager.save_file(content, file_path):
-    #             self.root.title(f"Knowgent - {file_path}")
-
-    def create_new_file(self):
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showerror("Error", "Please select a directory.")
-            return
-
-        full_path = self.get_full_path(selected_item[0])
-        if self.file_manager.is_directory(full_path):
-            file_name = filedialog.asksaveasfilename(initialdir=full_path, defaultextension=".txt")
-            if file_name:
-                if self.file_manager.create_file(file_name):
-                    self.process_directory(selected_item[0], full_path)
-                    messagebox.showinfo("Success", "File created successfully!")
-        else:
-            messagebox.showerror("Error", "Selected item is not a directory.")
-
-    def select_directory(self):
-        selected_directory = filedialog.askdirectory()
-        if selected_directory:
-            self.populate_tree(selected_directory)
-
-    def on_open_node(self, event):
-        selected_item = self.tree.selection()[0]
-        full_path = self.get_full_path(selected_item)
-        print(full_path)
-        self.process_directory(selected_item, full_path)
     
     def show_context_menu(self, event):
         """显示右键上下文菜单"""
@@ -803,6 +692,19 @@ class KnowgentGUI:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to rename note: {str(e)}")
 
+    def save_file(self, content, file_path=None):
+        if not file_path:
+            return False
+            
+        try:
+            with open(file_path, 'w') as file:
+                file.write(content)
+            # messagebox.showinfo("Success", f"File saved successfully at {save_path}")
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not save file: {e}")
+            return False
+
     def save_note(self):
         """
         保存当前编辑区的内容到笔记
@@ -821,7 +723,7 @@ class KnowgentGUI:
             file_path = self.note_service.get_note_file_path(note_title, notebook_name)
 
             # 保存内容到文件
-            if self.file_manager.save_file(content, file_path):
+            if self.save_file(content, file_path):
                 messagebox.showinfo("Success", f"Note '{note_title}' saved successfully!")
             else:
                 messagebox.showerror("Error", f"Failed to save note '{note_title}'.")
@@ -855,7 +757,7 @@ class KnowgentGUI:
                 file_path = self.note_service.get_note_file_path(note_title, notebook_name)
 
                 # 保存内容到文件
-                if self.file_manager.save_file(content, file_path):
+                if self.save_file(content, file_path):
                     messagebox.showinfo("Success", f"Note '{note_title}' saved successfully in notebook '{notebook_name}'!")
                     self.current_notebook = notebook_name
                     self.current_note = note_title
