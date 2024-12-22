@@ -1,5 +1,7 @@
 import os
+import re
 from pathlib import Path
+import random
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 from tkinterweb import HtmlFrame
@@ -249,6 +251,18 @@ class KnowgentGUI:
         # 创建一个空的填充框架
         self.spacer = ttk.Frame(self.editor_top_frame, style='Custom.TFrame')
         self.spacer.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # 创建一个标签展示区
+        self.tag_text = ""  # 初始化标签文本
+        self.tag_label = ttk.Label(
+            self.spacer,
+            text="Double click here to edit tags...",
+            background=self.themes[self.current_theme]['bg'],
+            foreground=self.themes[self.current_theme]['fg'],
+            font=('Arial', 10)
+       )
+        self.tag_label.pack(side=tk.LEFT, padx=5, pady=5)
+        self.tag_label.bind("<Double-1>", self.edit_tags) 
         
         # 添加Markdown预览按钮
         self.markdown_button = ttk.Button(
@@ -759,6 +773,7 @@ class KnowgentGUI:
                     messagebox.showinfo("Success", f"Note '{note_title}' saved successfully in notebook '{notebook_name}'!")
                     self.current_notebook = notebook_name
                     self.current_note = note_title
+                    self.tag_text = ""
                     self.populate_tree()  # 刷新树形结构
                 else:
                     messagebox.showerror("Error", f"Failed to save note '{note_title}'.")
@@ -808,6 +823,62 @@ class KnowgentGUI:
             updated_content = self.text_processor.replace_all(content, replace_word, new_word)
             self.text_area.delete("1.0", tk.END)
             self.text_area.insert("1.0", updated_content)
+
+    def edit_tags(self, event):
+        # 未选中笔记时无法编辑tag
+        if not self.current_note:
+            return
+
+        # 编辑标签文本
+        new_tags = simpledialog.askstring("Edit Tags", "Edit tags of the note (separated by ';'): ", initialvalue=self.tag_text, parent=self.root)
+        if new_tags is not None:  # 用户点击确定
+            # 格式化标签并生成tag_list
+            tag_list = [tag.strip() for tag in re.split(r'[;；]', new_tags) if tag.strip()]  # 去除空格并过滤空标签
+            self.tag_text = '; '.join(tag_list) + '; '  # 保存用户输入的标签
+
+            # 清空当前标签显示
+            for widget in self.spacer.winfo_children():
+                if widget.winfo_exists():  # 检查组件是否存在
+                    widget.destroy()
+
+            # 如果标签列表为空，显示提示文本
+            if not tag_list:
+                self.tag_label = tk.Label(
+                    self.spacer,
+                    text="Double click here to edit tags...",
+                    background=self.themes[self.current_theme]['bg'],
+                    foreground=self.themes[self.current_theme]['fg'],
+                    font=('Arial', 10)
+                )
+                self.tag_label.pack(side=tk.LEFT, padx=5, pady=5)
+                self.tag_label.bind("<Double-1>", self.edit_tags)  # 重新绑定事件
+            else:
+                # 生成小方块显示标签
+                for tag in tag_list:
+                    tag_frame = tk.Frame(self.spacer, bg=self.get_random_color(), width=60, height=20)  # 调整小方块的尺寸
+                    tag_frame.pack(side=tk.LEFT, padx=2, pady=2)
+                    tag_label = tk.Label(tag_frame, text=tag, bg=self.get_random_color(), fg='white')  # 将标签放入小方块中
+                    tag_label.pack(fill=tk.BOTH, expand=True)  # 使标签填充小方块
+                    tag_label.bind("<Double-1>", self.edit_tags)  # 绑定事件到每个标签
+
+                # 添加一个占位符，用于点击编辑标签
+                placeholder_label = tk.Label(
+                    self.spacer,
+                    text="",
+                    background=self.themes[self.current_theme]['bg'],
+                    foreground=self.themes[self.current_theme]['fg'],
+                    font=('Arial', 10)
+                )
+                placeholder_label.pack(side=tk.LEFT, padx=5, pady=5)
+                placeholder_label.bind("<Double-1>", self.edit_tags)  # 绑定事件到占位符
+    
+    def get_random_color(self):
+        """生成随机颜色"""
+
+        return f'#{random.randint(0, 0xFFFFFF):06x}'  
+    
+
+
 
     # ================= 悬浮按钮功能 ================= #
     def toggle_chat(self):
