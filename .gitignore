@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 application/database/MyRepository.db
 MyNotebooks/
+.db

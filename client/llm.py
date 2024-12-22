@@ -17,6 +17,8 @@ class llmagent:
         self.image_refs=[]
         self.image_path=None
         self.thumbnail_label=None
+        self.style=ttk.Style()
+        
 
     def create_chat(self,root):
         self.chat=ttk.Frame(root, style="Custom.TFrame")
@@ -62,11 +64,38 @@ class llmagent:
 
         # 将菜单关联到 Menubutton
         dropdown_button.config(menu=dropdown_menu)
+
+        self.style.configure('TScrollbar',
+                    background='#FFFFFF',
+                    arrowcolor='#2C3E50',
+                    bordercolor='#FFFFFF',
+                    troughcolor='#2C3E50',
+                    relief=tk.FLAT,
+                    width=12  # 设置滚动条宽度
+                )
+        
+        
+        # 配置滚动条贴图
+        self.style.map('TScrollbar',
+            background=[
+                ('pressed', '#E0E0E0'),
+                ('active', '#E0E0E0',),
+                ('!active', "#FFFFFF")
+            ],
+            arrowcolor=[
+                ('pressed', '#2C3E50'),
+                ('active', '#2C3E50'),
+                ('!active', '#2C3E50')
+            ]
+        )
+
         # 滚动条
-        scrollbar = ttk.Scrollbar(chat_frame, orient="vertical")
+        scrollbar = ttk.Scrollbar(chat_frame, orient="vertical",style='TScrollbar')
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        h_scrollbar = ttk.Scrollbar(chat_frame, orient="horizontal")
+        h_scrollbar = ttk.Scrollbar(chat_frame, orient="horizontal", style='TScrollbar')
         h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+
+
         # Canvas实现滚动
         self.chat_canvas = tk.Canvas(chat_frame, bg="white",xscrollcommand=h_scrollbar.set, yscrollcommand=scrollbar.set, highlightthickness=0)
         self.chat_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
