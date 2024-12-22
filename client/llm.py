@@ -18,7 +18,7 @@ class llmagent:
         self.image_path=None
         self.thumbnail_label=None
         self.style=ttk.Style()
-        
+        self.editor_content=None
 
     def create_chat(self,root):
         self.chat=ttk.Frame(root, style="Custom.TFrame")
@@ -331,8 +331,13 @@ class llmagent:
             widget.destroy()
         if self.input_entry.get("1.0", "end-1c") and not self.input_entry.get("1.0", "end-1c") == self.placeholder:
             self.input_entry.delete('1.0',tk.END)
-        self.image_path = None
+        
         self.Ollama.clear_chat_history()
-        self.cancel_upload()
+        if self.image_path:
+            self.image_path = None
+            self.cancel_upload()
         
 
+    def get_editor_content(self,content):
+        
+        self.editor_content=content
