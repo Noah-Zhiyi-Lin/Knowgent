@@ -107,7 +107,6 @@ class OllamaService:
                 ollama.pull(model_name)
                 return True
             except ollama.ResponseError as e:
-                return False
                 raise e
         except ollama.ResponseError as e:
             raise OllamaError(f"Failed to pull model {model_name}, HTTP status code: {e.status_code}")
@@ -173,11 +172,11 @@ class OllamaService:
                 
                 try:
                     image_base64 = self.__encode_image_to_base64(image_path)
-                    
+                    print(f"Image {image_path} transferred to base64")
                     messages.append(
                         {
                             "role": "user",
-                            "content": prompt,
+                            "content": f"An image has been sent hereby, please reply in according to the content of this image. {prompt}",
                             "image": [image_base64]
                         }
                     )

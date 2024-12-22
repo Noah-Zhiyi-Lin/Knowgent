@@ -1,9 +1,11 @@
 from server.application.services.ollama_service import OllamaService as Ollama
+from server.application.exceptions.ollama import OllamaError
 import tkinter as tk
-from tkinter import scrolledtext
 from tkinter import ttk
 from tkinter import PhotoImage
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
+from PIL import Image, ImageTk
+
 import threading
 
 class llmagent:
@@ -12,7 +14,10 @@ class llmagent:
         self.Ollama = Ollama()
         self.botstate = False
         self.bots=['qwen2.5:0.5b', 'llama3.2:1b', 'nomic-embed-text', 'mxbai-embed-large', ]
-        self.hint_label=None
+        self.image_refs=[]
+        self.image_path=None
+        self.thumbnail_label=None
+
     def create_chat(self,root):
         self.chat=ttk.Frame(root, style="Custom.TFrame")
         # ================= 聊天显示区域（带滚动条） ================= #
@@ -26,14 +31,18 @@ class llmagent:
         def check_and_pull(bot):
             self.botstate=False
             self.send_button.config(state='disabled')
-            self.botstate=self.Ollama.pull(bot)
+            try:
+                self.botstate=self.Ollama.pull(bot)
+            except OllamaError as e:
+                messagebox.showinfo("Error", "Please open ollama before choosing a model.")
+                menu_title.set("My model")
+                return 
             if self.botstate:
                 menu_title.set(bot)
                 self.model_name = bot
                 self.send_button.config(state='normal')
             else:
                 menu_title.set(f"{bot}:unavailable")
-                self.send_button.config(state='disabled')
 
         # 添加 OptionMenu 下拉菜单
         def on_person_selected(bot):
@@ -61,11 +70,16 @@ class llmagent:
         # Canvas实现滚动
         self.chat_canvas = tk.Canvas(chat_frame, bg="white",xscrollcommand=h_scrollbar.set, yscrollcommand=scrollbar.set, highlightthickness=0)
         self.chat_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.chat_canvas.yview)
         
+        scrollbar.config(command=self.chat_canvas.yview)
+        h_scrollbar.config(command=self.chat_canvas.xview)
+        
+
+
         def on_mouse_wheel(event):
         # 实现鼠标滚轮滚动效果
             self.chat_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            #print("wheeling")
         def on_shift_mouse_wheel(event):
         # 按住Shift时，鼠标滚轮进行水平滚动
             self.chat_canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
@@ -76,21 +90,22 @@ class llmagent:
 
         # 在Canvas上创建一个Frame来容纳消息内容
         self.chat_frame_inner = tk.Frame(self.chat_canvas, bg="white")
-        chat_window = self.chat_canvas.create_window((0, 0), window=self.chat_frame_inner, anchor="nw")
+        self.window=self.chat_canvas.create_window((0, 0), window=self.chat_frame_inner, anchor="nw")        
+    
 
         def on_frame_configure(event):
-        # 更新Canvas的滚动区域大小
+        # # 更新Canvas的滚动区域大小
             self.chat_canvas.config(scrollregion=self.chat_canvas.bbox("all"))
-            self.chat_canvas.itemconfig(chat_window, width=event.width)
-        
+            
         self.chat_frame_inner.bind("<Configure>", on_frame_configure)
-
-        # 更新Canvas大小
-        def update_scroll_region(event):
-            self.chat_canvas.configure(scrollregion=self.chat_canvas.bbox("all"))
-
-        self.chat_frame_inner.bind("<Configure>", update_scroll_region)
         
+        def resize_message_canvas(event):
+            canvas_width = max(self.chat_canvas.winfo_width(), self.chat_frame_inner.winfo_reqwidth())
+            self.chat_canvas.itemconfig(self.window, width=canvas_width)
+            pass
+
+        self.chat_canvas.bind("<Configure>", resize_message_canvas)
+
         # ================= 输入框区域 ================= #
         self.input_frame = tk.Frame(self.chat, bg="#DEDEDE", height=80, highlightbackground='white',highlightthickness=2)
         self.input_frame.pack(side=tk.BOTTOM, fill='both')
@@ -98,15 +113,15 @@ class llmagent:
 
         # 使用grid布局管理输入框和按钮
         self.placeholder='Ask me anything'
-        self.input_entry = tk.Entry(self.input_frame, font=("等线", 12), relief="flat", bg="#DEDEDE",fg="#8F8F8F")
-        self.input_entry.grid(row=0, column=0, padx=10, pady=10, columnspan=3,sticky="ew")
+        self.input_entry = tk.Text(self.input_frame, font=("等线", 12), relief="flat", bg="#DEDEDE",fg="#8F8F8F",wrap="word", height=5)
+        self.input_entry.grid(row=1, column=0, padx=10, pady=10, columnspan=3,sticky="ew")
         def on_focus_in(event):
-            if self.input_entry.get() == self.placeholder:
-                self.input_entry.delete('0', tk.END)  # 清空输入框
+            if self.input_entry.get("1.0", "end-1c") == self.placeholder:
+                self.input_entry.delete('1.0', tk.END)  # 清空输入框
                 self.input_entry.config(fg="black")  # 设置输入文字颜色为黑色
 
         def on_focus_out(event):
-            if not self.input_entry.get():  # 输入框为空时显示提示文字
+            if not self.input_entry.get("1.0", "end-1c"):  # 输入框为空时显示提示文字
                 self.input_entry.insert(tk.END, self.placeholder)
                 self.input_entry.config(fg="#8F8F8F")  # 设置提示文字颜色为灰色
 
@@ -124,19 +139,19 @@ class llmagent:
 
         send_icon = PhotoImage(file="./client/src/send.png")
         self.send_button = tk.Button(self.input_frame, image=send_icon, bg="#DEDEDE",command=self.send_message, relief='flat')
-        self.send_button.grid(row=0, column=3, padx=10, pady=10, sticky="e")
+        self.send_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
         self.send_button.image = send_icon
         self.send_button.config(state='disabled')
 
         image_icon = PhotoImage(file="./client/src/clip.png")
         image_button = tk.Button(self.input_frame, image=image_icon, bg="#DEDEDE",command=self.upload_image, relief='flat')
-        image_button.grid(row=1, column=0, padx=10, pady=10, sticky="ws")
+        image_button.grid(row=2, column=0, padx=10, pady=10, sticky="ws")
         image_button.image = image_icon
-        self.image_path=None
+        
 
         new_icon = PhotoImage(file="./client/src/add.png")
         new_button = tk.Button(self.input_frame, image=new_icon, bg="#DEDEDE",command=self.new_chat, relief='flat')
-        new_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+        new_button.grid(row=2, column=3, padx=10, pady=10, sticky="e")
         new_button.image = new_icon
         
 
@@ -162,7 +177,7 @@ class llmagent:
         return canvas.create_polygon(points, **kwargs, smooth=True)
 
     # 添加消息的函数
-    def add_message(self, sender, text):
+    def add_message(self, sender, text=None, image_path=None):
         """添加消息到聊天窗口"""
         if sender == "user":
             msg_color = "#DCF8C6"  # 浅绿色背景
@@ -171,16 +186,22 @@ class llmagent:
             msg_color = "#E5E5E5"  # 浅灰色背景
             anchor = "w"  # 左对齐
 
-        # 消息容器
         message_frame = tk.Frame(self.chat_frame_inner, bg="white")
         message_frame.pack(anchor=anchor, pady=5, padx=10)
 
         # 使用Canvas绘制圆角矩形
         message_canvas = tk.Canvas(message_frame, bg="white", highlightthickness=0)
-        message_canvas.pack()
+        message_canvas.pack(padx=5,pady=5)
 
-        max_width = 400  # 最大气泡宽度
-        text_id = message_canvas.create_text(10, 10, anchor="nw", text=text, font=("等线", 12), fill="black", width=max_width)
+        if image_path:
+            image = Image.open(image_path)
+            image.thumbnail((350, 350))  # 缩放到 150x150 像素以内
+            photo = ImageTk.PhotoImage(image)
+            self.image_refs.append(photo)
+            text_id=message_canvas.create_image(10,10,anchor="nw", image=photo)
+        else:
+            max_width = 400  # 最大气泡宽度
+            text_id = message_canvas.create_text(10, 10, anchor="nw", text=text, font=("等线", 12), fill="black", width=max_width)
 
         # 动态计算文本宽高
         bbox = message_canvas.bbox(text_id)
@@ -192,7 +213,6 @@ class llmagent:
 
         # 重新调整文本的位置，使其居中于圆角矩形内
         message_canvas.coords(text_id, 15, 15)
-
         message_canvas.tag_raise(text_id, rect_id)
 
         # 调整Canvas的大小
@@ -203,50 +223,87 @@ class llmagent:
     # 发送消息的函数
     def send_message(self):
         if self.botstate:
-            user_text = self.input_entry.get().strip()
+            user_text = self.input_entry.get("1.0", "end-1c").strip()
+            if not self.image_path and not user_text:
+                return
+            if self.image_path:
+                self.add_message("user",image_path=self.image_path)
+                self.thumbnail_label.destroy()
+                self.thumbnail_label = None
+                self.cancel_button.destroy()
+                self.cancel_button = None
+            
             if user_text:
-                print("send")
-                self.input_entry.delete("0", tk.END)
+                self.input_entry.delete("1.0", tk.END)
                 self.add_message("user", user_text)
-                mesg=self.add_message("message","...")
-                thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg))
-                thread.start()
-                self.image_path = None
+            mesg=self.add_message("message","...")
+            thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg))
+            thread.start()
+            
             # 滚动到底部
             self.chat_canvas.yview_moveto(1.0)
-            if self.hint_label:
-                self.hint_label.destroy()
 
-    def get_bot_reply(self, user_text,mesg):
+    def get_bot_reply(self, user_text, mesg):
         reply = self.Ollama.chat(self.model_name, user_text, include_history=True, image_path=self.image_path)
         # 在主线程中更新 UI
+        self.image_path = None
         mesg.destroy()
         self.add_message("bot", reply)
 
     def upload_image(self): 
         try:       
+            init_dir = "MyNotebooks"
             file_path = filedialog.askopenfilename(
+                initialdir=init_dir,
+                title="Select an image",
                 filetypes=[
                     ("img", ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif"]),
                 ]
             )
-            self.image_path = file_path
-            # 添加欢迎文字标签
-            self.hint_label = tk.Label(self.input_frame, text="Image uploaded successfully", font=("Arial", 12), fg="#8F8F8F", bg="#DEDEDE")
-            self.hint_label.grid(row=1, column=1, padx=0, pady=10, sticky="w") 
-            
-             # 放在底部，调整上下间距
+            if file_path:
+                self.image_path = file_path
+                image = Image.open(file_path)
+                image.thumbnail((100, 100))  # 设置缩略图大小
+                thumbnail = ImageTk.PhotoImage(image)
+
+                if self.thumbnail_label:
+                    self.thumbnail_label.destroy()
+
+                self.thumbnail_label = tk.Label(self.input_frame, image=thumbnail)
+                self.thumbnail_label.image = thumbnail  # 保持引用
+                self.thumbnail_label.grid(row=0, column=0, padx=5, pady=5)
+
+                cancel_icon = PhotoImage(file="./client/src/delete.png")
+                self.cancel_button = tk.Button(
+                    self.input_frame, 
+                    text="Cancel", 
+                    command=self.cancel_upload,
+                    image=cancel_icon,
+                    relief="flat",
+                    bg="#DEDEDE"
+                )
+                self.cancel_button.grid(row=0, column=3, padx=5, pady=5)
+                self.cancel_button.image=cancel_icon
+
         except Exception as e:
             print(f"Error: {e}")
+
+    def cancel_upload(self):
+        # 删除缩略图和取消按钮，清空图片路径
+        self.thumbnail_label.destroy()
+        self.thumbnail_label = None
+        self.cancel_button.destroy()
+        self.cancel_button = None
+        self.image_path = None
+        #print("Image upload canceled.")
 
     def new_chat(self):
         for widget in self.chat_frame_inner.winfo_children():
             widget.destroy()
-        if self.input_entry.get() and not self.input_entry.get() == self.placeholder:
-            self.input_entry.delete('0',tk.END)
+        if self.input_entry.get("1.0", "end-1c") and not self.input_entry.get("1.0", "end-1c") == self.placeholder:
+            self.input_entry.delete('1.0',tk.END)
         self.image_path = None
         self.Ollama.clear_chat_history()
-        if self.hint_label:
-            self.hint_label.destroy()
+        self.cancel_upload()
         
 

@@ -16,8 +16,6 @@ class KnowgentGUI:
         self.text_processor = TextProcessor()
         self.markdown_mode = False
         self.chat_mode=False
-        self.button_offset_x=0, 
-        self.button_offset_y=0
         
         #当前打开的笔记/笔记本
         self.current_notebook = None
@@ -302,9 +300,9 @@ class KnowgentGUI:
         editor_scrollbar.config(command=self.text_area.yview)
 
         self.chat_button = tk.Button(editor_container, 
-                                      text="AI", 
+                                      text="Knowgent", 
                                       height=3,
-                                      width=6,
+                                      width=8,
                                       bg="#DEDEDE", 
                                       fg="black", 
                                       font=("Arial", 12), 
