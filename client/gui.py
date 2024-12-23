@@ -13,6 +13,7 @@ from server.application.services.notebook_service import NotebookService
 from server.application.services.note_service import NoteService
 from server.application.services.note_tag_service import NoteTagService
 from server.application.services.tag_service import TagService
+from server.application.exceptions import NoteTagError
 
 class KnowgentGUI:
     def __init__(self, root, db):
@@ -724,14 +725,26 @@ class KnowgentGUI:
         if not file_path:
             return False
             
-        try:
-            with open(file_path, 'w') as file:
+        try: 
+            with open(file_path, "w") as file:
                 file.write(content)
-            # messagebox.showinfo("Success", f"File saved successfully at {save_path}")
-            return True
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not save file: {e}")
-            return False
+        except:
+            try:
+                with open(file_path, "w", encoding="utf-8") as file:
+                    file.write(content)
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not save file: {e}")
+                return False
+        return True
+
+        # try:
+        #     with open(file_path, 'w') as file:
+        #         file.write(content)
+        #     # messagebox.showinfo("Success", f"File saved successfully at {save_path}")
+        #     return True
+        # except Exception as e:
+        #     messagebox.showerror("Error", f"Could not save file: {e}")
+        #     return False
 
     def save_note(self):
         """
@@ -870,6 +883,13 @@ class KnowgentGUI:
             for tag in tags_to_add:
                 try:
                     self.note_tag_service.add_tag_to_note(self.current_note, self.current_notebook, tag)
+                except NoteTagError:
+                    try:
+                        self.tag_service.create_tag(tag)  # 调用 tag_service 创建 tag
+                        self.note_tag_service.add_tag_to_note(self.current_note, self.current_notebook, tag)  # 重新添加标签
+                    except Exception as e:
+                        pass
+                        messagebox.showerror("Error", f"Failed to create tag '{tag}': {str(e)}")
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to add tag '{tag}': {str(e)}")
 

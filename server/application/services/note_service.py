@@ -174,7 +174,6 @@ class NoteService:
     #         raise NoteError(
     #             f"Failed to get the content of note {title} in notebook {notebook_name}: {str(e)}"
     #         )
-    
     def get_note_content(self, title, notebook_name):
         """
         获取笔记的内容
@@ -194,8 +193,15 @@ class NoteService:
 
             # Try to read the note file
             # with open(file_path, "r", encoding="utf-8") as file:
-            with open(file_path, "r") as file:
-                content = file.read()
+            try: 
+                with open(file_path, "r") as file:
+                    content = file.read()
+            except:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as file:
+                        content = file.read()
+                except Exception as e:
+                    raise e
 
             if not content:
                 return ""
