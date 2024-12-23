@@ -4,10 +4,11 @@ from contextlib import contextmanager
 from server.application.exceptions import DatabaseError
 
 class Database:
-    def __init__(self, repository_name):
+    def __init__(self, repository_name, base_path = '.'):
         """
         Initialize the database object
         :param repository_name: name of the notebook repository
+        :base_path: the path containing all notebooks and notes
         """
         # Path of the database file (attention that the name of database file is fixed)
         self.__db_path = Path(__file__).parent / f"{repository_name}.db"
@@ -15,6 +16,8 @@ class Database:
         self.__connection = None
         # The cursor of the database
         self.__cursor = None
+        # Base path
+        self.__base_path = base_path
         # Execute initialization
         self.initialize()
 
@@ -110,7 +113,6 @@ class Database:
             CREATE TABLE IF NOT EXISTS notebooks (
                 id INTEGER PRIMARY KEY,
                 notebook_name TEXT NOT NULL UNIQUE,
-                notebook_path TEXT NOT NULL UNIQUE,
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -121,7 +123,6 @@ class Database:
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY,
                 title TEXT NOT NULL,
-                file_path TEXT NOT NULL UNIQUE,
                 notebook_id INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -228,3 +229,10 @@ class Database:
             # Rollback if an error occurs
             self.rollback_transaction()
             raise # Raise the error
+        
+    def get_base_path(self):
+        """
+        Get the base path
+        :return: base path
+        """
+        return self.__base_path

@@ -17,11 +17,10 @@ class NotebookModel:
             raise ValidationError("Database connection cannot be None")
         self.db = db
 
-    def create_notebook(self, notebook_name, notebook_path, description):
+    def create_notebook(self, notebook_name, description):
         """
         Create a new notebook
         :param notebook_name: name of the new notebook
-        :param notebook_path: path of the new notebook
         :param description: description of the new notebook
         :raises ValidationError: if the notebook name or the notebook path is empty
         :raises DuplicateNotebookError: if the notebook already exists
@@ -30,16 +29,14 @@ class NotebookModel:
         """
         if notebook_name is None:
             raise ValidationError("Notebook name cannot be None")
-        if notebook_path is None:
-            raise ValidationError("Notebook path cannot be None")
         # Try to create the notebook
         try:
             with self.db.transaction():
                 sql = """
-                INSERT INTO notebooks (notebook_name, notebook_path, description)
+                INSERT INTO notebooks (notebook_name, description)
                 VALUES (?, ?, ?)
                 """
-                params = [notebook_name, notebook_path, description]
+                params = [notebook_name, description]
                 self.db.execute(sql, params)
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint" in str(e):
@@ -91,12 +88,11 @@ class NotebookModel:
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get notebook: {str(e)}")
         
-    def update_notebook(self, notebook_id, new_name=None, new_path=None, new_description=None):
+    def update_notebook(self, notebook_id, new_name=None, new_description=None):
         """
         Update a notebook's details by its ID
         :param notebook_id: ID of the notebook
         :param new_name: new name of the notebook
-        :param new_path: new path of the notebook
         :param new_description: new description of the notebook
         :raises ValidationError: if no update parameters provided or invalid notebook ID
         :raises NotebookNotFoundError: if the notebook dose not exist
@@ -106,7 +102,7 @@ class NotebookModel:
         """
         if not isinstance(notebook_id, int) or notebook_id <= 0:
             raise ValidationError("Invalid notebook ID")
-        if not any([new_name, new_path, new_description]):
+        if not any([new_name, new_description]):
             raise ValidationError("At least one update parameter must be provided")
         # Try to update the notebook
         try:
@@ -121,9 +117,6 @@ class NotebookModel:
                 if new_name:
                     updates.append(" notebook_name = ?")
                     params.append(new_name)
-                if new_path:
-                    updates.append(" notebook_path = ?")
-                    params.append(new_path)
                 if new_description:
                     updates.append(" description = ?")
                     params.append(new_description)

@@ -22,6 +22,7 @@ class NoteService:
         try:
             self.note_model = NoteModel(db)
             self.notebook_service = NotebookService(db)
+            self.__base_path = self.note_model.db.get_base_path()
         except (ValidationError, NotebookError) as e:
             raise NoteError(f"Failed to initialize NoteService: {str(e)}")
         except Exception as e:
@@ -42,9 +43,8 @@ class NoteService:
             except NotebookError as e:
                 raise e
             notebook_id = notebook["id"]
-            notebook_path = notebook["notebook_path"]
             # Create note file path
-            file_path = Path(notebook_path) / f"{title}.md"
+            file_path = Path(f"{self.__base_path}/{notebook_name}/{title}.md")
             # Try to create the note
             try:
                 file_path.touch(exist_ok = False)
@@ -54,7 +54,7 @@ class NoteService:
                 raise FileSystemError(f"Failed to create note file: {str(e)}")
             # Try to create the note in the database
             try:
-                self.note_model.create_note(title, str(file_path), notebook_id)
+                self.note_model.create_note(title, notebook_id)
                 return True
             except (
                 ValidationError,
@@ -78,49 +78,67 @@ class NoteService:
         ) as e:
             raise NoteError(f"Failed to create note {title} in notebook {notebook_name}: {str(e)}")
     
-    # def get_note(self, title, notebook_name):
-    #     """
-    #     Get a note by its title
-    #     :param: title: title of the note
-    #     :param: notebook_name: name of the notebook which the note belongs to
-    #     :raises NoteError: if retrieval fails
-    #     :return: note details or None if not found
-    #     """
-    #     try:
-    #         # Try to get notebook_id
-    #         try:
-    #             notebook = self.notebook_service.get_notebook(notebook_name)
-    #         except NotebookError as e:
-    #             raise e
-    #         notebook_id = notebook["id"]
-    #         note_id = self.note_model.get_note_id(title, notebook_id)
-    #         return self.note_model.get_note(note_id)
-    #     except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
-    #         raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
-
-    def get_note_file_path(self, title, notebook_name):
+    def get_note(self, title, notebook_name):
         """
-        获取笔记的文件路径
-        :param title: 笔记的标题
-        :param notebook_name: 笔记本的名称
-        :raises NoteError: 如果获取文件路径失败
-        :return: 笔记的文件路径
+        Get a note by its title
+        :param: title: title of the note
+        :param: notebook_name: name of the notebook which the note belongs to
+        :raises NoteError: if retrieval fails
+        :return: note details or None if not found
         """
         try:
-            # 获取笔记本的 ID
-            notebook = self.notebook_service.get_notebook(notebook_name)
+            # Try to get notebook_id
+            try:
+                notebook = self.notebook_service.get_notebook(notebook_name)
+            except NotebookError as e:
+                raise e
             notebook_id = notebook["id"]
-
-            # 获取笔记的 ID
             note_id = self.note_model.get_note_id(title, notebook_id)
+            return self.note_model.get_note(note_id)
+        except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
+            raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
 
-            # 获取笔记的详细信息
-            note_dict = self.note_model.get_note(note_id)
+    # def get_note_file_path(self, title, notebook_name):
+    #     """
+    #     获取笔记的文件路径
+    #     :param title: 笔记的标题
+    #     :param notebook_name: 笔记本的名称
+    #     :raises NoteError: 如果获取文件路径失败
+    #     :return: 笔记的文件路径
+    #     """
+    #     try:
+    #         # 获取笔记本的 ID
+    #         notebook = self.notebook_service.get_notebook(notebook_name)
+    #         notebook_id = notebook["id"]
 
-            # 返回笔记的文件路径
-            return note_dict["file_path"]
-        except (NotebookError, NoteNotFoundError, DatabaseError, Exception) as e:
-            raise NoteError(f"Failed to get file path for note {title} in notebook {notebook_name}: {str(e)}")
+    #         # 获取笔记的 ID
+    #         note_id = self.note_model.get_note_id(title, notebook_id)
+
+    #         # 获取笔记的详细信息
+    #         note_dict = self.note_model.get_note(note_id)
+
+    #         # 返回笔记的文件路径
+    #         return note_dict["file_path"]
+    #     except (NotebookError, NoteNotFoundError, DatabaseError, Exception) as e:
+    #         raise NoteError(f"Failed to get file path for note {title} in notebook {notebook_name}: {str(e)}")
+      
+    def get_note_file_path(self, title, notebook_name):
+        """
+        Get the path of note
+        :param: title: title of the note
+        :param: notebook_name: name of the notebook which the note belongs to
+        :raises: NoteError: if failed to get the path
+        :return: the path of the note
+        """
+        try:
+            # Check whether the note exists
+            try:
+                self.get_note(title, notebook_name)
+            except NoteError as e:
+                raise e
+            return f"{self.__base_path}/{notebook_name}/{title}.md"
+        except (NoteError, Exception) as e:
+            raise NoteError(f"Fail to get note file path: {str(e)}")
     
     # def get_note_content(self, title, notebook_name):
     #     """
@@ -156,6 +174,7 @@ class NoteService:
     #         raise NoteError(
     #             f"Failed to get the content of note {title} in notebook {notebook_name}: {str(e)}"
     #         )
+    
     def get_note_content(self, title, notebook_name):
         """
         获取笔记的内容
@@ -202,22 +221,28 @@ class NoteService:
             except NoteError as e:
                 raise e
             note_id = note["id"]
-            current_file_path = Path(note['file_path'])
+            current_file_path = None
+            # Try to get current file path
+            try:
+                current_file_path = Path(self.get_note_file_path(title, notebook_name))
+            except NoteError as e:
+                raise e
             new_file_path = None
             new_notebook_id = None
             # Handle notebook transfer
             if new_notebook_name:
-                # Try to get the new notebook
+                # Check whether new notebook exists
                 try:
                     new_notebook = self.notebook_service.get_notebook(new_notebook_name)
                 except NotebookError as e:
                     raise e
                 new_notebook_id = new_notebook["id"]
-                new_notebook_path = new_notebook["notebook_path"]
-                if new_title:
-                    new_file_path = Path(new_notebook_path) / f"{new_title}.md"
-                else:
-                    new_file_path = Path(new_notebook_path) / f"{title}.md"
+                if new_title and not new_notebook_name: # Only rename the note
+                    new_file_path = Path(f"{self.__base_path}/{notebook_name}/{new_title}.md")
+                elif not new_title and new_notebook_name: # Transfer to new notebook with same title
+                    new_file_path = Path(f"{self.__base_path}/{new_notebook_name}/{title}.md")
+                else: # Transfer to new notebook with new title
+                    new_file_path = Path(f"{self.__base_path}/{new_notebook_name}/{new_title}.md")
             # Handle title change
             elif new_title:
                 new_file_path = current_file_path.parent / f"{new_title}.md"
@@ -226,7 +251,6 @@ class NoteService:
                 self.note_model.update_note(
                     note_id = note_id,
                     new_title = new_title if new_title else None,
-                    new_path = str(new_file_path) if new_file_path else None,
                     new_notebook_id = new_notebook_id if new_notebook_id else None
                 )
                 # Move note file if file path is changed
@@ -276,7 +300,12 @@ class NoteService:
             except NoteError as e:
                 raise e
             note_id = note["id"]
-            file_path = Path(note["file_path"])
+            # Try to get note file path
+            file_path = None
+            try:
+                file_path = self.get_note_file_path(title, notebook_name)
+            except NoteError as e:
+                raise e
             # Delete note in database
             self.note_model.delete_note(note_id)
             # Delete note file
@@ -331,29 +360,6 @@ class NoteService:
             return self.note_model.get_all_notes()
         except (DatabaseError, Exception) as e:
             raise NoteError(f"Failed to get all notes: {str(e)}")
-        
-
-    def get_note(self, title, notebook_name):
-        """
-        Get a note by its title
-        :param: title: title of the note
-        :param: notebook_name: name of the notebook which the note belongs to
-        :raises NoteError: if retrieval fails
-        :return: note details or None if not found
-        """
-        try:
-            # Try to get notebook_id
-            try:
-                notebook = self.notebook_service.get_notebook(notebook_name)
-            except NotebookError as e:
-                raise e
-            
-            notebook_id = notebook["id"]
-            note_id = self.note_model.get_note_id(title, notebook_id)   # error occourred
-
-            return self.note_model.get_note(note_id)
-        except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
-            raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
 
     def get_all_notes_in_notebook(self, notebook_name):
         """

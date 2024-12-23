@@ -1,16 +1,18 @@
 from pathlib import Path
 from server.application.models.notebook_model import NotebookModel
+from server.application.services.note_service import NoteService
 from server.application.exceptions import (
     ValidationError,
     DatabaseError,
     NotebookError,
+    NoteError,
     NotebookNotFoundError,
     DuplicateNotebookError,
     FileSystemError
 )
 
 class NotebookService:
-    def __init__(self, db, base_path='.'):
+    def __init__(self, db):
         """
         Initialize the NotebookService with a connection to the database
         :param db: connection to the database
@@ -18,7 +20,8 @@ class NotebookService:
         """
         try:
             self.notebook_model = NotebookModel(db)
-            self.__base_path = base_path
+            self.__base_path = self.notebook_model.db.get_base_path()
+            self.note_service = NoteService(db)
         except ValidationError as e:
             raise NotebookError(f"Failed to initialize NotebookService: {str(e)}")
         except Exception as e:
@@ -42,7 +45,6 @@ class NotebookService:
             # Create the notebook in the database
             self.notebook_model.create_notebook(
                 notebook_name = notebook_name,
-                notebook_path = str(notebook_path),
                 description = description
             )
             return True
@@ -94,23 +96,38 @@ class NotebookService:
                 self.notebook_model.update_notebook(
                     notebook_id = notebook_id,
                     new_name = new_name,
-                    new_path = str(new_path) if new_path else None,
                     new_description = new_description
                 )
-                # Change notebook path if new path is given
-                if new_path:
-                    current_path.rename(new_path)
+                # If new notebook name is given, update all realted notes
+                if new_name:
+                    try:
+                        # Get all notes belong to current notebook
+                        notes = self.note_service.get_all_notes_in_notebook(notebook_name)
+                        titles = [note["title"] for note in notes]
+                        for title in titles:
+                            self.note_service.update_note(
+                                title = title,
+                                notebook_name = notebook_name,
+                                new_notebook_name = new_name
+                            )
+                    except NoteError as e:
+                        raise e
+                    # Change notebook path if new path is given
+                    if new_path:
+                        current_path.rename(new_path)
                 return True
             except (
                 ValidationError,
                 NotebookNotFoundError,
                 DuplicateNotebookError,
+                NoteError,
                 DatabaseError,
             ) as e:
                 raise e
         except (ValidationError, 
                 NotebookNotFoundError,
                 DuplicateNotebookError,
+                NoteError,
                 DatabaseError,
                 Exception) as e:
             # Restore the original directory if update fails
@@ -130,6 +147,15 @@ class NotebookService:
             notebook_path = Path(self.__base_path) / notebook_name
             # Delete the notebook from the database
             self.notebook_model.delete_notebook(notebook_id)
+            # Delete all related notes
+            try:
+                # Get all notes belong to current notebook
+                notes = self.note_service.get_all_notes_in_notebook(notebook_name)
+                titles = [note["title"] for note in notes]
+                for title in titles:
+                    self.note_service.delete_note(title, notebook_name)
+            except NoteError as e:
+                raise e
             # Delete the notebook directory
             if notebook_path.exists():
                 self._remove_dir(notebook_path)
@@ -138,6 +164,7 @@ class NotebookService:
                 NotebookNotFoundError,
                 DatabaseError,
                 FileSystemError,
+                NoteError,
                 Exception) as e:
             raise NotebookError(f"Failed to delete notebook {notebook_name}: {str(e)}")
         

@@ -32,11 +32,10 @@ class NoteModel:
             return False
         return True
         
-    def create_note(self, title, file_path, notebook_id):
+    def create_note(self, title, notebook_id):
         """
         Create a new note
         :param title: title of the note
-        :param file_path: path of the note
         :param notebook_id: ID of the notebook which the note belongs to
         :raises ValidationError: if the title or file path is None, or notebook ID is invalid
         :raises DuplicateNoteError: if the note already exists
@@ -46,8 +45,6 @@ class NoteModel:
         """
         if title is None:
             raise ValidationError("Note title cannot be None")
-        if file_path is None:
-            raise ValidationError("Note path cannot be None")
         if not isinstance(notebook_id, int) or notebook_id <= 0:
             raise ValidationError("Invalid notebook ID")
         # Check if the notebook exists
@@ -57,10 +54,10 @@ class NoteModel:
             with self.db.transaction():
                 # Create the note
                 sql = """
-                INSERT INTO notes (title, file_path, notebook_id)
-                VALUES (?, ?, ?)
+                INSERT INTO notes (title, notebook_id)
+                VALUES (?, ?)
                 """
-                params = [title, file_path, notebook_id]
+                params = [title, notebook_id]
                 self.db.execute(sql, params)
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint" in str(e):
@@ -118,12 +115,11 @@ class NoteModel:
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get note: {str(e)}")
 
-    def update_note(self, note_id, new_title=None, new_path=None, new_notebook_id=None):
+    def update_note(self, note_id, new_title=None, new_notebook_id=None):
         """
         Update a note by ID
         :param note_id: ID of the note
         :param new_title: new title of the note
-        :param new_path: new path of the note
         :param new_notebook_id: new notebook id of the note
         :raises ValidationError: if the note ID or new notebook ID is invalid, or no update parameter is provided
         :raises NoteNotFoundError: if the note does not exist
@@ -134,14 +130,13 @@ class NoteModel:
         """
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValidationError("Invalid note ID")
-        if not any([new_title, new_path, new_notebook_id]):
+        if not any([new_title, new_notebook_id]):
             raise ValidationError("At least one update parameter must be provided")
         # If new notebook_id is provided, check if the notebook id is valid and if the notebook exists
         if new_notebook_id:
             if not isinstance(new_notebook_id, int) or new_notebook_id <= 0:
                 raise ValidationError("Invalid notebook ID")
-            check_sql = "SELECT id FROM notebooks WHERE id = ?"
-            if self.db.fetchone(check_sql, [new_notebook_id]) is None:
+            if not self.__is_notebook_exists(new_notebook_id):
                 raise NotebookNotFoundError(f"Notebook with ID {new_notebook_id} does not exist")
         # Try to update the note
         try:
@@ -156,9 +151,6 @@ class NoteModel:
                 if new_title:
                     updates.append(" title = ?")
                     params.append(new_title)
-                if new_path:
-                    updates.append(" file_path = ?")
-                    params.append(new_path)
                 # Use get_id_by_name() in NotebookModel to get id of a notebook
                 if new_notebook_id:
                     updates.append(" notebook_id = ?")
