@@ -115,17 +115,7 @@ class NoteService:
             note_id = self.note_model.get_note_id(title, notebook_id)
 
             # 获取笔记的详细信息
-            note_tuple = self.note_model.get_note(note_id)
-
-            # 将元组转换为字典
-            note_dict = {
-                'id': note_tuple[0],
-                'title': note_tuple[1],
-                'file_path': note_tuple[2],
-                'notebook_id': note_tuple[3],
-                'created_at': note_tuple[4],
-                'updated_at': note_tuple[5]
-            }
+            note_dict = self.note_model.get_note(note_id)
 
             # 返回笔记的文件路径
             return note_dict["file_path"]
@@ -177,6 +167,7 @@ class NoteService:
         try:
             # Try to get the path of the note file
             file_path = self.get_note_file_path(title, notebook_name)
+            print(file_path)
 
             # Check whether the file exists
             if not Path(file_path).exists():
@@ -359,17 +350,8 @@ class NoteService:
             
             notebook_id = notebook["id"]
             note_id = self.note_model.get_note_id(title, notebook_id)   # error occourred
-            note_tuple = self.note_model.get_note(note_id)
-            # 将元组转换为字典
-            note_dict = {
-                'id': note_tuple[0],
-                'title': note_tuple[1],
-                'file_path': note_tuple[2],
-                'notebook_id': note_tuple[3],
-                'created_at': note_tuple[4],
-                'updated_at': note_tuple[5]
-            }
-            return note_dict
+
+            return self.note_model.get_note(note_id)
         except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
             raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
 
@@ -387,22 +369,7 @@ class NoteService:
             except NotebookError as e:
                 raise e
             notebook_id = notebook["id"]
-            notes_tuples = self.note_model.get_all_notes_in_notebook(notebook_id)
-
-            # 将元组列表转换为字典列表
-            notes_dicts = []
-            for note_tuple in notes_tuples:
-                note_dict = {
-                    'id': note_tuple[0],
-                    'title': note_tuple[1],
-                    'file_path': note_tuple[2],
-                    'notebook_id': note_tuple[3],
-                    'created_at': note_tuple[4],
-                    'updated_at': note_tuple[5]
-                }
-                notes_dicts.append(note_dict)
-
-            return notes_dicts
+            return self.note_model.get_all_notes_in_notebook(notebook_id)
         except (
             NotebookError,
             ValidationError,
