@@ -589,6 +589,22 @@ class KnowgentGUI:
             context_menu.add_command(label="Delete Notebook", command=lambda: self.delete_notebook(selected_item))  # 删除笔记本选项
         context_menu.post(event.x_root, event.y_root)
 
+    def rename_selected_item(self, event=None):
+        """
+        重命名选中的笔记本或笔记
+        """
+        selected_item = self.tree.selection()
+        if not selected_item:
+            # messagebox.showwarning("No Selection", "Please select a notebook or note to delete.")
+            return
+
+        item_type = self.tree.parent(selected_item[0])  # 判断是笔记本还是笔记
+
+        if item_type:  # 如果是笔记
+            self.rename_note()  # 调用重命名笔记的函数
+        else:  # 如果是笔记本
+            self.rename_notebook(selected_item)  # 调用删除笔记本的函数
+
     def delete_selected_item(self, event=None):
         """
         删除选中的笔记本或笔记

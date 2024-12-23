@@ -48,9 +48,10 @@ class MenuBuilder:
     # 文件菜单
         file_menu.add_command(label="Create Notebook", command=self.gui.create_notebook, accelerator="Ctrl+N")
         file_menu.add_command(label="Create Note", command=self.gui.create_note_in_menu, accelerator="Ctrl+Shift+N")
-        file_menu.add_command(label="Rename Note", command=self.gui.rename_note)
+        file_menu.add_command(label="Rename", command=self.gui.rename_selected_item)
         file_menu.add_command(label="Save", command=self.gui.save_note, accelerator="Ctrl+S")
         file_menu.add_command(label="Save As", command=self.gui.save_note_as, accelerator="Ctrl+Shift+S")
+        file_menu.add_command(label="Delete", command=self.gui.delete_selected_item)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit, accelerator="Ctrl+Q")
 
