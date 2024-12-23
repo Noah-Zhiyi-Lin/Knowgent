@@ -16,6 +16,7 @@ class KnowgentGUI:
         self.text_processor = TextProcessor()
         self.markdown_mode = False
         self.chat_mode=False
+        self.chat=llmagent()
         
         #当前打开的笔记/笔记本
         self.current_notebook = None
@@ -312,10 +313,12 @@ class KnowgentGUI:
                                     )
         self.chat_button.tkraise()
         self.chat_button.pack(side=tk.RIGHT, padx=30, pady=30)
-        self.root.bind('<Control-k>', self.toggle_chat)     
+        self.root.bind('<Control-k>', lambda e:self.toggle_chat(e))     
 
-        self.chat.tag_button.config(command=lambda: self.on_tag())
-        self.chat.outline_button.config(command=lambda: self.on_outline())
+        self.chat_window= self.chat.create_chat(self.paned_window)
+
+        self.chat.tag_button.config(command=lambda: self.chat.create_tag(self.text_area.get("1.0", tk.END)))
+        self.chat.outline_button.config(command=lambda: self.chat.create_outline(self.text_area.get("1.0", tk.END)))
         # 创建预览区
         self.preview_frame = ttk.Frame(self.paned_window, style='Custom.TFrame')
         self.preview_area = HtmlFrame(self.preview_frame, messages_enabled=False)
@@ -324,8 +327,8 @@ class KnowgentGUI:
         # 绑定事件
         self.text_area.bind('<<Modified>>', self.on_text_modified)
 
-        self.chat=llmagent()
-        self.chat_window= self.chat.create_chat(self.paned_window)
+        
+        
                 
         
         # 创建文件浏览器
@@ -812,16 +815,9 @@ class KnowgentGUI:
             self.text_area.insert("1.0", updated_content)
 
     # ================= 悬浮按钮功能 ================= #
-    def toggle_chat(self):
+    def toggle_chat(self,event):
         self.chat_mode = not self.chat_mode
         if self.chat_mode:
             self.paned_window.add(self.chat_window,weight=5) # 显示左侧窗口
         else:
             self.paned_window.remove(self.chat_window) # 隐藏左侧窗口
-
-    # ================== 大纲与标签 ================= #
-    def on_tag(self,tag):
-        pass
-
-    def on_outline(self,outline):
-        pass

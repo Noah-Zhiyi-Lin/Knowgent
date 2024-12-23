@@ -163,8 +163,14 @@ class llmagent:
             if self.botstate:
                 self.send_message()
                 return "break"  # 阻止默认的换行行为
+            
+        def insert_newline(event=None):
+            """在输入框中插入换行符"""
+            self.input_entry.insert(tk.INSERT, "\n")
+            return "break" 
 
         self.input_entry.bind("<Return>", on_enter_press)  
+        self.input_entry.bind("<Shift-Return>", insert_newline)  
 
         send_icon = PhotoImage(file="./client/src/send.png")
         self.send_button = tk.Button(self.input_frame, image=send_icon, bg="#DEDEDE",command=self.send_message, relief='flat')
@@ -287,6 +293,24 @@ class llmagent:
         self.image_path = None
         mesg.destroy()
         self.add_message("bot", reply)
+    
+    def create_outline(self, editor_text):
+        
+        user_text = editor_text.strip()
+        print(user_text)
+        if user_text and self.botstate:
+            input = "Please generate an outline for the following note. Make sure the language of your response is the same as the following note." + user_text
+            mesg=self.add_message("message","...")
+            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg))
+            thread.start()
+
+    def create_tag(self, editor_text):
+        user_text = editor_text.strip()
+        if user_text and self.botstate:
+            input = "Please generate some tags that can properly describe and classify the following note. Each tag should be put in a seperate line. Make sure the language of your response is the same as the following note." + user_text
+            mesg=self.add_message("message","...")
+            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg))
+            thread.start()
 
     def upload_image(self): 
         try:       
