@@ -331,7 +331,7 @@ class KnowgentGUI:
                                     )
         self.chat_button.tkraise()
         self.chat_button.pack(side=tk.RIGHT, padx=30, pady=30)
-        self.root.bind('<Control-k>', lambda e:self.toggle_chat(e))     
+        self.root.bind('<Control-k>', lambda e:self.toggle_chat())     
 
         self.chat_window= self.chat.create_chat(self.paned_window)
 
@@ -944,7 +944,7 @@ class KnowgentGUI:
 
 
     # ================= 悬浮按钮功能 ================= #
-    def toggle_chat(self,event):
+    def toggle_chat(self):
         self.chat_mode = not self.chat_mode
         if self.chat_mode:
             self.paned_window.add(self.chat_window,weight=5) # 显示左侧窗口
