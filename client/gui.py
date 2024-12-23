@@ -312,8 +312,10 @@ class KnowgentGUI:
                                     )
         self.chat_button.tkraise()
         self.chat_button.pack(side=tk.RIGHT, padx=30, pady=30)
-        self.root.bind('<Control-k>', lambda e:self.toggle_chat())        
+        self.root.bind('<Control-k>', self.toggle_chat)     
 
+        self.chat.tag_button.config(command=lambda: self.on_tag())
+        self.chat.outline_button.config(command=lambda: self.on_outline())
         # 创建预览区
         self.preview_frame = ttk.Frame(self.paned_window, style='Custom.TFrame')
         self.preview_area = HtmlFrame(self.preview_frame, messages_enabled=False)
@@ -816,3 +818,10 @@ class KnowgentGUI:
             self.paned_window.add(self.chat_window,weight=5) # 显示左侧窗口
         else:
             self.paned_window.remove(self.chat_window) # 隐藏左侧窗口
+
+    # ================== 大纲与标签 ================= #
+    def on_tag(self,tag):
+        pass
+
+    def on_outline(self,outline):
+        pass

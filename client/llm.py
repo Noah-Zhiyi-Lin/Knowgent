@@ -143,7 +143,7 @@ class llmagent:
         # 使用grid布局管理输入框和按钮
         self.placeholder='Ask me anything'
         self.input_entry = tk.Text(self.input_frame, font=("等线", 12), relief="flat", bg="#DEDEDE",fg="#8F8F8F",wrap="word", height=5)
-        self.input_entry.grid(row=1, column=0, padx=10, pady=10, columnspan=3,sticky="ew")
+        self.input_entry.grid(row=1, column=0, padx=10, pady=10, columnspan=4,sticky="ew")
         def on_focus_in(event):
             if self.input_entry.get("1.0", "end-1c") == self.placeholder:
                 self.input_entry.delete('1.0', tk.END)  # 清空输入框
@@ -168,7 +168,7 @@ class llmagent:
 
         send_icon = PhotoImage(file="./client/src/send.png")
         self.send_button = tk.Button(self.input_frame, image=send_icon, bg="#DEDEDE",command=self.send_message, relief='flat')
-        self.send_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+        self.send_button.grid(row=1, column=4, padx=10, pady=10, sticky="e")
         self.send_button.image = send_icon
         self.send_button.config(state='disabled')
 
@@ -180,11 +180,20 @@ class llmagent:
 
         new_icon = PhotoImage(file="./client/src/add.png")
         new_button = tk.Button(self.input_frame, image=new_icon, bg="#DEDEDE",command=self.new_chat, relief='flat')
-        new_button.grid(row=2, column=3, padx=10, pady=10, sticky="e")
+        new_button.grid(row=2, column=4, padx=10, pady=10, sticky="e")
         new_button.image = new_icon
         
+        tag_icon = PhotoImage(file="./client/src/tag.png")
+        self.tag_button = tk.Button(self.input_frame, image=tag_icon, bg="#DEDEDE", relief='flat')
+        self.tag_button.grid(row=2, column=2, padx=10, pady=10, sticky="w")
+        self.tag_button.image = tag_icon
 
-        self.input_frame.grid_columnconfigure(2, weight=1) 
+        outline_icon = PhotoImage(file="./client/src/stroke.png")
+        self.outline_button = tk.Button(self.input_frame, image=outline_icon, bg="#DEDEDE", relief='flat')
+        self.outline_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
+        self.outline_button.image = outline_icon
+
+        self.input_frame.grid_columnconfigure(3, weight=1) 
 
         return self.chat
 
@@ -337,7 +346,3 @@ class llmagent:
             self.image_path = None
             self.cancel_upload()
         
-
-    def get_editor_content(self,content):
-        
-        self.editor_content=content
