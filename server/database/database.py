@@ -24,6 +24,8 @@ class Database:
         """
         # Database file will be created if it does not exist
         self.__connection = sqlite3.connect(self.__db_path)
+        # Return by sqlite3.Row
+        self.__connection.row_factory = sqlite3.Row
         self.__cursor = self.__connection.cursor()
 
     def close(self):
@@ -63,29 +65,32 @@ class Database:
         Fetch one row from the query result
         :param sql: sql statement to be executed
         :param params: parameters to be passed into the sql statement
-        :return: the first row of the result, if nothing matches the sql statement, return None
+        :return: dictionary of the result, if nothing matches the sql statement, return None
         """
         if not self.__cursor:
             raise DatabaseError("Cursor is not initialized. Please check the database connection")
         if params is None:
             params = []
         self.__cursor.execute(sql, params)
-        return self.__cursor.fetchone()
+        result = self.__cursor.fetchone()
+        # If the result is not None, convert it to a dictionary
+        return dict(result) if result else None
 
     def fetchall(self, sql, params=None):
         """
         Fetch all rows from the query result
         :param sql: sql statement to be executed
         :param params: parameters to be passed into the sql statement
-        :return: a list of tuples and one row is one tuple
+        :return: a list of dictionaries, each dictionary is one row of the result
         """
         if not self.__cursor:
             raise DatabaseError("Cursor is not initialized. Please check the database connection")
         if params is None:
             params = []
         self.__cursor.execute(sql, params)
-        return self.__cursor.fetchall()
-
+        # Return list of dictionaries
+        return [dict(result) for result in self.__cursor.fetchall()]
+        
     def initialize(self):
         """
         Initialize the database

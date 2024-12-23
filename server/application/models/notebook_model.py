@@ -65,7 +65,7 @@ class NotebookModel:
             result = self.db.fetchone(sql, [notebook_name])
             if result is None:
                 raise NotebookNotFoundError(f"Notebook with name {notebook_name} does not exist")
-            return result[0]
+            return result["id"]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get notebook ID: {str(e)}")
 
@@ -77,7 +77,7 @@ class NotebookModel:
         :rasies ValidationError: if the notebook ID is invalid
         :rasies NotbookNotFoundError: if the notebook dose not exist
         :rases DatabaseError: if database operation fails
-        :return: row of the notebook in database
+        :return: dictionary of the notebook in database
         """
         if not isinstance(notebook_id, int) or notebook_id <= 0:
             raise ValidationError("Invalid notebook ID")
@@ -169,7 +169,7 @@ class NotebookModel:
         """
         Retrieve all notebooks
         :raises DatabaseError: if database operation fails
-        :return: List of all notebooks in database
+        :return: List of all notebooks in database (list of dictionaries)
         """
         try:
             sql = "SELECT * FROM notebooks"

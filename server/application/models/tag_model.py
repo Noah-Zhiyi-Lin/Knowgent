@@ -69,7 +69,7 @@ class TagModel:
         :rasies ValidationError: if the tag ID is invalid
         :raises TagNotFoundError: if the tag does not exist
         :raises DatabaseError: if database operation fails
-        :return: row of the tag in database
+        :return: dictionary of the tag in database
         """
         if not isinstance(tag_id, int) or tag_id <= 0:
             raise ValidationError("Invalid tag ID")
@@ -142,7 +142,7 @@ class TagModel:
         """
         Retrieve all tags
         :raises DatabaseError: if database operation fails
-        :return: List of all tags in the database
+        :return: List of all tags in the database (list of dictionaries)
         """
         try:
             sql = "SELECT * FROM tags"
