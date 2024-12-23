@@ -154,8 +154,6 @@ class NotebookService:
         try:
             notebook_id = self.__notebook_model.get_notebook_id(notebook_name)
             notebook_path = Path(self.__base_path) / notebook_name
-            # Delete the notebook from the database
-            self.__notebook_model.delete_notebook(notebook_id)
             # Delete all related notes
             try:
                 # Get all notes belong to current notebook
@@ -165,6 +163,8 @@ class NotebookService:
                     self.note_service.delete_note(title, notebook_name)
             except NoteError as e:
                 raise e
+            # Delete the notebook from the database
+            self.__notebook_model.delete_notebook(notebook_id)
             # Delete the notebook directory
             if notebook_path.exists():
                 self._remove_dir(notebook_path)
