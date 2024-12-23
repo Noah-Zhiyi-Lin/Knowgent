@@ -1,6 +1,7 @@
 from server.application.models.note_tag_model import NoteTagModel
 from server.application.services.note_service import NoteService
 from server.application.services.tag_service import TagService
+from server.application.models.note_model import NoteModel
 from server.application.exceptions import (
     ValidationError,
     DatabaseError,
@@ -23,6 +24,7 @@ class NoteTagService:
             self.note_tag_model = NoteTagModel(db)
             self.note_service = NoteService(db)
             self.tag_service = TagService(db)
+            self.note_model = NoteModel(db)
         except (ValidationError, NoteError, TagError) as e:
             raise NoteTagError(f"Failed to initialize NoteTagService: {str(e)}")
         except Exception as e:
@@ -73,7 +75,7 @@ class NoteTagService:
         :param title: title of the note
         :param notebook_name: name of the notebook which the note belongs to
         :raises NoteTagError: if retrieval fails
-        :return: list of tags associated with the note
+        :return: list of tag names associated with the note
         """
         try:
             # Try to get the note
@@ -102,7 +104,9 @@ class NoteTagService:
             except TagError as e:
                 raise e
             tag_id = tag["id"]
-            return self.note_tag_model.get_notes_for_tag(tag_id)
+            note_ids =  self.note_tag_model.get_notes_for_tag(tag_id)
+            notes = [self.note_model.get_note(note_id) for note_id in note_ids]
+            return notes
         except (TagError, ValidationError, TagNotFoundError, DatabaseError, Exception) as e:
             raise NoteTagError(f"Failed to get notes for tag {tag_name}: {str(e)}")
 

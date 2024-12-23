@@ -20,6 +20,7 @@ class TagService:
             raise TagError(f"Failed to initialize TagService: {str(e)}")
         except Exception as e:
             raise TagError(f"Unexpected error during TagService initialization: {str(e)}")
+        
     def create_tag(self, tag_name):
         """
         Create a new tag
@@ -81,9 +82,10 @@ class TagService:
         """
         Get all tags
         :raises TagError: if retrieval fails
-        :return: list of all tags
+        :return: list of all tag names
         """
         try:
-            return self.tag_model.get_all_tags()
+            tags = self.tag_model.get_all_tags()
+            return [tag["tag_name"] for tag in tags]
         except (DatabaseError, Exception) as e:
             raise TagError(f"Failed to get all tags: {str(e)}")

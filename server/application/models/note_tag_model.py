@@ -92,7 +92,7 @@ class NoteTagModel:
         :raises ValidationError: if note_id is invalid
         :raises NoteNotFoundError: if the note does not exist
         :raises DatabaseError: if database operation fails
-        :return: List of tags associated with the note
+        :return: List of tag names associated with the note
         """
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValidationError("Invalid note ID")
@@ -100,8 +100,14 @@ class NoteTagModel:
             raise NoteNotFoundError(f"Note with ID {note_id} does not exist")
         # Try to get the tags associated with the note
         try:
-            sql = "SELECT tag_id FROM note_tags WHERE note_id = ?"
-            return self.db.fetchall(sql, [note_id])
+            sql = """
+            SELECT tags.tag_name
+            FROM tags
+            JOIN note_tags ON tags.id = note_tags.tag_id
+            WHERE note_tags.note_id = ?
+            """
+            results = self.db.fetchall(sql, [note_id])
+            return [result["tag_name"] for result in results]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get tags for note: {str(e)}")
 
@@ -112,7 +118,7 @@ class NoteTagModel:
         :raises ValidationError: if tag_id is invalid
         :raises TagNotFoundError: if the tag does not exist
         :raises DatabaseError: if database operation fails
-        :return: List of notes associated with the tag
+        :return: List of note ids associated with the tag
         """
         if not isinstance(tag_id, int) or tag_id <= 0:
             raise ValidationError("Invalid tag ID")
@@ -120,8 +126,14 @@ class NoteTagModel:
             raise TagNotFoundError(f"Tag with ID {tag_id} does not exist")
         # Try to get the notes associated with the tag
         try:
-            sql = "SELECT note_id FROM note_tags WHERE tag_id = ?"
-            return self.db.fetchall(sql, [tag_id])
+            sql = """
+            SELECT notes.id
+            FROM notes
+            JOIN note_tags ON notes.id = note_tags.note_id
+            WHERE note_tags.tag_id = ?
+            """
+            results = self.db.fetchall(sql, [tag_id])
+            return [result["id"] for result in results]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get notes for tag: {str(e)}")
 

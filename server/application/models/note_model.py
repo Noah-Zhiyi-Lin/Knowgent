@@ -93,7 +93,7 @@ class NoteModel:
             result = self.db.fetchone(sql, [title, notebook_id])
             if result is None:
                 raise NoteNotFoundError(f"Note with title {title} does not exist")
-            return result[0]
+            return result["id"]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get note ID: {str(e)}")
 
@@ -105,7 +105,7 @@ class NoteModel:
         :raises ValidationError: if the note ID is invalid
         :raises NoteNotFoundError: if the note does not exist
         :raises DatabaseError: if database operation fails
-        :return: row of the note in database
+        :return: dictionary of the note in database
         """
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValidationError("Invalid note ID")
@@ -207,7 +207,7 @@ class NoteModel:
         :raises: ValidationError: if the notebook ID is invalid
         :raises: NotebookNotFoundError: if the notebook does not exist
         :raises: DatabaseError: if database operation fails
-        :return: List of all notes in the notebook
+        :return: List of all notes in the notebook (list of dictionaries)
         """
         if not isinstance(notebook_id, int) or notebook_id <= 0:
             raise ValidationError("Invalid notebook ID")
@@ -224,7 +224,7 @@ class NoteModel:
         """
         Retrieve all notes
         :raises DatabaseError: if database operation fails
-        :return: List of all notes in database
+        :return: List of all notes in database (list of dictionaries)
         """
         try:
             sql = "SELECT * FROM notes"

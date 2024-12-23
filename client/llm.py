@@ -17,6 +17,8 @@ class llmagent:
         self.image_refs=[]
         self.image_path=None
         self.thumbnail_label=None
+        self.style=ttk.Style()
+        self.editor_content=None
 
     def create_chat(self,root):
         self.chat=ttk.Frame(root, style="Custom.TFrame")
@@ -62,11 +64,38 @@ class llmagent:
 
         # 将菜单关联到 Menubutton
         dropdown_button.config(menu=dropdown_menu)
+
+        self.style.configure('TScrollbar',
+                    background='#FFFFFF',
+                    arrowcolor='#2C3E50',
+                    bordercolor='#FFFFFF',
+                    troughcolor='#2C3E50',
+                    relief=tk.FLAT,
+                    width=12  # 设置滚动条宽度
+                )
+        
+        
+        # 配置滚动条贴图
+        self.style.map('TScrollbar',
+            background=[
+                ('pressed', '#E0E0E0'),
+                ('active', '#E0E0E0',),
+                ('!active', "#FFFFFF")
+            ],
+            arrowcolor=[
+                ('pressed', '#2C3E50'),
+                ('active', '#2C3E50'),
+                ('!active', '#2C3E50')
+            ]
+        )
+
         # 滚动条
-        scrollbar = ttk.Scrollbar(chat_frame, orient="vertical")
+        scrollbar = ttk.Scrollbar(chat_frame, orient="vertical",style='TScrollbar')
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        h_scrollbar = ttk.Scrollbar(chat_frame, orient="horizontal")
+        h_scrollbar = ttk.Scrollbar(chat_frame, orient="horizontal", style='TScrollbar')
         h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+
+
         # Canvas实现滚动
         self.chat_canvas = tk.Canvas(chat_frame, bg="white",xscrollcommand=h_scrollbar.set, yscrollcommand=scrollbar.set, highlightthickness=0)
         self.chat_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -114,7 +143,7 @@ class llmagent:
         # 使用grid布局管理输入框和按钮
         self.placeholder='Ask me anything'
         self.input_entry = tk.Text(self.input_frame, font=("等线", 12), relief="flat", bg="#DEDEDE",fg="#8F8F8F",wrap="word", height=5)
-        self.input_entry.grid(row=1, column=0, padx=10, pady=10, columnspan=3,sticky="ew")
+        self.input_entry.grid(row=1, column=0, padx=10, pady=10, columnspan=4,sticky="ew")
         def on_focus_in(event):
             if self.input_entry.get("1.0", "end-1c") == self.placeholder:
                 self.input_entry.delete('1.0', tk.END)  # 清空输入框
@@ -134,12 +163,18 @@ class llmagent:
             if self.botstate:
                 self.send_message()
                 return "break"  # 阻止默认的换行行为
+            
+        def insert_newline(event=None):
+            """在输入框中插入换行符"""
+            self.input_entry.insert(tk.INSERT, "\n")
+            return "break" 
 
         self.input_entry.bind("<Return>", on_enter_press)  
+        self.input_entry.bind("<Shift-Return>", insert_newline)  
 
         send_icon = PhotoImage(file="./client/src/send.png")
         self.send_button = tk.Button(self.input_frame, image=send_icon, bg="#DEDEDE",command=self.send_message, relief='flat')
-        self.send_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+        self.send_button.grid(row=1, column=4, padx=10, pady=10, sticky="e")
         self.send_button.image = send_icon
         self.send_button.config(state='disabled')
 
@@ -151,11 +186,20 @@ class llmagent:
 
         new_icon = PhotoImage(file="./client/src/add.png")
         new_button = tk.Button(self.input_frame, image=new_icon, bg="#DEDEDE",command=self.new_chat, relief='flat')
-        new_button.grid(row=2, column=3, padx=10, pady=10, sticky="e")
+        new_button.grid(row=2, column=4, padx=10, pady=10, sticky="e")
         new_button.image = new_icon
         
+        tag_icon = PhotoImage(file="./client/src/tag.png")
+        self.tag_button = tk.Button(self.input_frame, image=tag_icon, bg="#DEDEDE", relief='flat')
+        self.tag_button.grid(row=2, column=2, padx=10, pady=10, sticky="w")
+        self.tag_button.image = tag_icon
 
-        self.input_frame.grid_columnconfigure(2, weight=1) 
+        outline_icon = PhotoImage(file="./client/src/stroke.png")
+        self.outline_button = tk.Button(self.input_frame, image=outline_icon, bg="#DEDEDE", relief='flat')
+        self.outline_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
+        self.outline_button.image = outline_icon
+
+        self.input_frame.grid_columnconfigure(3, weight=1) 
 
         return self.chat
 
@@ -249,6 +293,24 @@ class llmagent:
         self.image_path = None
         mesg.destroy()
         self.add_message("bot", reply)
+    
+    def create_outline(self, editor_text):
+        
+        user_text = editor_text.strip()
+        print(user_text)
+        if user_text and self.botstate:
+            input = "Please generate an outline for the following note. Make sure the language of your response is the same as the following note." + user_text
+            mesg=self.add_message("message","...")
+            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg))
+            thread.start()
+
+    def create_tag(self, editor_text):
+        user_text = editor_text.strip()
+        if user_text and self.botstate:
+            input = "Please generate some tags that can properly describe and classify the following note. Each tag should be put in a seperate line. Make sure the language of your response is the same as the following note." + user_text
+            mesg=self.add_message("message","...")
+            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg))
+            thread.start()
 
     def upload_image(self): 
         try:       
@@ -302,8 +364,9 @@ class llmagent:
             widget.destroy()
         if self.input_entry.get("1.0", "end-1c") and not self.input_entry.get("1.0", "end-1c") == self.placeholder:
             self.input_entry.delete('1.0',tk.END)
-        self.image_path = None
-        self.Ollama.clear_chat_history()
-        self.cancel_upload()
         
-
+        self.Ollama.clear_chat_history()
+        if self.image_path:
+            self.image_path = None
+            self.cancel_upload()
+        
