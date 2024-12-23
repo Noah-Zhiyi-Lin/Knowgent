@@ -122,40 +122,6 @@ class NoteService:
         except (NotebookError, NoteNotFoundError, DatabaseError, Exception) as e:
             raise NoteError(f"Failed to get file path for note {title} in notebook {notebook_name}: {str(e)}")
     
-    # def get_note_content(self, title, notebook_name):
-    #     """
-    #     Get the content of a note
-    #     :param title: title of the note
-    #     :param notebook_name: name of the notebook which the note belongs to
-    #     :raises NoteError: if retrieval fails
-    #     :return: content of the note
-    #     """
-    #     try:
-    #         # Try to get the path of the note file
-    #         try:
-    #             note_dict = self.get_note(title, notebook_name)
-    #         except NoteError as e:
-    #             raise e
-    #         file_path = note_dict["file_path"]
-
-    #         # Check whether the file exists
-    #         if not Path(file_path).exists():
-    #             raise FileSystemError(
-    #                 f"File of note {title} in notebook {notebook_name} does not exist: {file_path}"
-    #             )
-
-    #         # Try to read the note file
-    #         try:
-    #             with open(file_path, "r", encoding="utf-8") as file:
-    #                 return file.read()
-    #         except IOError as e:
-    #             raise FileSystemError(
-    #                 f"Failed to read the file of note {title} in notebook {notebook_name}: {str(e)}"
-    #             )
-    #     except (NoteError, FileSystemError, Exception) as e:
-    #         raise NoteError(
-    #             f"Failed to get the content of note {title} in notebook {notebook_name}: {str(e)}"
-    #         )
     def get_note_content(self, title, notebook_name):
         """
         获取笔记的内容
@@ -175,8 +141,15 @@ class NoteService:
 
             # Try to read the note file
             # with open(file_path, "r", encoding="utf-8") as file:
-            with open(file_path, "r") as file:
-                content = file.read()
+            try: 
+                with open(file_path, "r") as file:
+                    content = file.read()
+            except:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as file:
+                        content = file.read()
+                except Exception as e:
+                    raise e
 
             if not content:
                 return ""

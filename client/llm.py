@@ -281,14 +281,14 @@ class llmagent:
                 self.input_entry.delete("1.0", tk.END)
                 self.add_message("user", user_text)
             mesg=self.add_message("message","...")
-            thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg))
+            thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg, True))
             thread.start()
             
             # 滚动到底部
             self.chat_canvas.yview_moveto(1.0)
 
-    def get_bot_reply(self, user_text, mesg):
-        reply = self.Ollama.chat(self.model_name, user_text, include_history=True, image_path=self.image_path)
+    def get_bot_reply(self, user_text, mesg, if_include):
+        reply = self.Ollama.chat(self.model_name, user_text, if_include, image_path=self.image_path)
         # 在主线程中更新 UI
         self.image_path = None
         mesg.destroy()
@@ -297,19 +297,19 @@ class llmagent:
     def create_outline(self, editor_text):
         
         user_text = editor_text.strip()
-        print(user_text)
+        #print(user_text)
         if user_text and self.botstate:
             input = "Please generate an outline for the following note. Make sure the language of your response is the same as the following note." + user_text
-            mesg=self.add_message("message","...")
-            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg))
+            mesg=self.add_message("message","Generating outline, please wait...")
+            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg, False))
             thread.start()
 
     def create_tag(self, editor_text):
         user_text = editor_text.strip()
         if user_text and self.botstate:
-            input = "Please generate some tags that can properly describe and classify the following note. Each tag should be put in a seperate line. Make sure the language of your response is the same as the following note." + user_text
-            mesg=self.add_message("message","...")
-            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg))
+            input = "Please generate 2 to 5 tags that can properly describe and classify the following note. Each tag should be put in a seperate line. Make sure the language of your response is the same as the following note." + user_text
+            mesg=self.add_message("message","Generating tags, please wait...")
+            thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg, False))
             thread.start()
 
     def upload_image(self): 
