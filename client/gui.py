@@ -1,7 +1,7 @@
 import os
 import re
 from pathlib import Path
-import random
+import hashlib
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 from tkinterweb import HtmlFrame
@@ -11,6 +11,8 @@ from .notebookselect import NotebookSelectionDialog
 from .llm import llmagent
 from server.application.services.notebook_service import NotebookService
 from server.application.services.note_service import NoteService
+from server.application.services.note_tag_service import NoteTagService
+from server.application.services.tag_service import TagService
 
 class KnowgentGUI:
     def __init__(self, root, db):
@@ -26,6 +28,8 @@ class KnowgentGUI:
         # 初始化后端服务
         self.notebook_service = NotebookService(db, base_path="MyNotebooks")  # 初始化 NotebookService
         self.note_service = NoteService(db)  # 初始化 NoteService
+        self.note_tag_service = NoteTagService(db)  #初始化 NoteTagService
+        self.tag_service = TagService(db)  #初始化 TagService
         
         self.is_left_frame_visible = False
         # 更新主题配色
@@ -428,11 +432,18 @@ class KnowgentGUI:
                 self.text_area.delete(1.0, tk.END)  # 清空编辑区
                 self.text_area.insert(tk.END, content)  # 显示笔记内容
                 self.root.title(f"Knowgent - {note_title} in {notebook_name}")  # 更新窗口标题
+
+                # 查询笔记的标签
+                tags = self.note_tag_service.get_tags_for_note(note_title, notebook_name)
+                self.tag_text = "; ".join(tags) if tags else ""  # 更新 self.tag_text
+                self.render_tags(tags)  # 渲染标签
+
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load note: {str(e)}")
         else:  # 如果是笔记本
             notebook_name = self.tree.item(item, "text")
             self.tree.item(item, open=not self.tree.item(item, "open"))  # 展开或收起笔记本
+
 
     def on_text_modified(self, event=None):
         """当文本内容改变时触发"""
@@ -830,10 +841,41 @@ class KnowgentGUI:
             return
 
         # 编辑标签文本
-        new_tags = simpledialog.askstring("Edit Tags", "Edit tags of the note (separated by ';'): ", initialvalue=self.tag_text, parent=self.root)
+        new_tags = simpledialog.askstring("Edit Tags", "Edit tags of the note (separated by ';' or '；'): ", initialvalue=self.tag_text, parent=self.root)
         if new_tags is not None:  # 用户点击确定
             # 格式化标签并生成tag_list
             tag_list = [tag.strip() for tag in re.split(r'[;；]', new_tags) if tag.strip()]  # 去除空格并过滤空标签
+
+            # 调用后端服务获取该笔记的现有标签
+            try:
+                existing_tags = self.note_tag_service.get_tags_for_note(self.current_note, self.current_notebook)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to fetch existing tags: {str(e)}")
+                return
+
+            # 将现有标签和新的标签列表转换为集合，方便对比
+            existing_tags_set = set(existing_tags)
+            new_tags_set = set(tag_list)
+
+            # 计算需要添加的标签和需要删除的标签
+            tags_to_add = new_tags_set - existing_tags_set
+            tags_to_remove = existing_tags_set - new_tags_set
+
+            # 添加新标签
+            for tag in tags_to_add:
+                try:
+                    self.note_tag_service.add_tag_to_note(self.current_note, self.current_notebook, tag)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to add tag '{tag}': {str(e)}")
+
+            # 删除不再需要的标签
+            for tag in tags_to_remove:
+                try:
+                    self.note_tag_service.remove_tag_from_note(self.current_note, self.current_notebook, tag)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to remove tag '{tag}': {str(e)}")
+
+            # 更新 self.tag_text
             self.tag_text = '; '.join(tag_list) + '; '  # 保存用户输入的标签
 
             # 清空当前标签显示
@@ -841,42 +883,58 @@ class KnowgentGUI:
                 if widget.winfo_exists():  # 检查组件是否存在
                     widget.destroy()
 
+            # 渲染标签
+            self.render_tags(tag_list)
+
+    def render_tags(self, tag_list):
+        # 清空当前标签显示
+        for widget in self.spacer.winfo_children():
+            if widget.winfo_exists():  # 检查组件是否存在
+                widget.destroy()
+
+        """根据 tag_list 渲染标签"""
+        if not tag_list:
             # 如果标签列表为空，显示提示文本
-            if not tag_list:
-                self.tag_label = tk.Label(
-                    self.spacer,
-                    text="Double click here to edit tags...",
-                    background=self.themes[self.current_theme]['bg'],
-                    foreground=self.themes[self.current_theme]['fg'],
-                    font=('Arial', 10)
-                )
-                self.tag_label.pack(side=tk.LEFT, padx=5, pady=5)
-                self.tag_label.bind("<Double-1>", self.edit_tags)  # 重新绑定事件
-            else:
-                # 生成小方块显示标签
-                for tag in tag_list:
-                    tag_frame = tk.Frame(self.spacer, bg=self.get_random_color(), width=60, height=20)  # 调整小方块的尺寸
-                    tag_frame.pack(side=tk.LEFT, padx=2, pady=2)
-                    tag_label = tk.Label(tag_frame, text=tag, bg=self.get_random_color(), fg='white')  # 将标签放入小方块中
-                    tag_label.pack(fill=tk.BOTH, expand=True)  # 使标签填充小方块
-                    tag_label.bind("<Double-1>", self.edit_tags)  # 绑定事件到每个标签
+            self.tag_label = tk.Label(
+                self.spacer,
+                text="Double click here to edit tags...",
+                background=self.themes[self.current_theme]['bg'],
+                foreground=self.themes[self.current_theme]['fg'],
+                font=('Arial', 10)
+            )
+            self.tag_label.pack(side=tk.LEFT, padx=5, pady=5)
+            self.tag_label.bind("<Double-1>", self.edit_tags)  # 重新绑定事件
+        else:
+            # 生成小方块显示标签
+            for tag in tag_list:
+                tag_color = self.get_color_from_string(tag)  # 根据标签内容生成颜色
+                tag_frame = tk.Frame(self.spacer, bg=tag_color, width=60, height=20)  # 调整小方块的尺寸
+                tag_frame.pack(side=tk.LEFT, padx=2, pady=2)
+                tag_label = tk.Label(tag_frame, text=tag, bg=tag_color, fg='white')  # 将标签放入小方块中
+                tag_label.pack(fill=tk.BOTH, expand=True)  # 使标签填充小方块
+                tag_label.bind("<Double-1>", self.edit_tags)  # 绑定事件到每个标签
 
-                # 添加一个占位符，用于点击编辑标签
-                placeholder_label = tk.Label(
-                    self.spacer,
-                    text="",
-                    background=self.themes[self.current_theme]['bg'],
-                    foreground=self.themes[self.current_theme]['fg'],
-                    font=('Arial', 10)
-                )
-                placeholder_label.pack(side=tk.LEFT, padx=5, pady=5)
-                placeholder_label.bind("<Double-1>", self.edit_tags)  # 绑定事件到占位符
+            # 添加一个占位符，用于点击编辑标签
+            placeholder_label = tk.Label(
+                self.spacer,
+                text="",
+                background=self.themes[self.current_theme]['bg'],
+                foreground=self.themes[self.current_theme]['fg'],
+                font=('Arial', 10)
+            )
+            placeholder_label.pack(side=tk.LEFT, padx=5, pady=5)
+            placeholder_label.bind("<Double-1>", self.edit_tags)  # 绑定事件到占位符
     
-    def get_random_color(self):
-        """生成随机颜色"""
-
-        return f'#{random.randint(0, 0xFFFFFF):06x}'  
-    
+    def get_color_from_string(self, tag):
+        """根据字符串生成固定颜色"""
+        # 使用 SHA-256 哈希算法计算字符串的哈希值
+        hash_object = hashlib.sha256(tag.encode('utf-8'))
+        hash_hex = hash_object.hexdigest()
+        
+        # 取哈希值的前6个字符作为颜色值
+        color_hex = hash_hex[:6]
+        
+        return f'#{color_hex}'
 
 
 
