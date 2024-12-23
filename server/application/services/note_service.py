@@ -319,7 +319,7 @@ class NoteService:
             # Try to get note file path
             file_path = None
             try:
-                file_path = self.get_note_file_path(title, notebook_name)
+                file_path = Path(self.get_note_file_path(title, notebook_name))
             except NoteError as e:
                 raise e
             # Delete note in database
