@@ -340,7 +340,7 @@ class NoteService:
             Exception
         ) as e:
             raise NoteError(f"Failed to delete note {title} in notebook {notebook_name}: {str(e)}")
-    
+        
     # def get_all_notes_in_notebook(self, notebook_name):
     #     """
     #     Get all notes in a notebook

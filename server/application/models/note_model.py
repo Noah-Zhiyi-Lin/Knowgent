@@ -181,16 +181,37 @@ class NoteModel:
         """
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValidationError("Invalid note ID")
+        # Check whether the note exists
+        if not self.get_note(note_id):
+            raise NoteNotFoundError(f"Note with ID {note_id} does not exist")
         try:
-            # Check whether the note exists
-            if not self.get_note(note_id):
-                raise NoteNotFoundError(f"Note with ID {note_id} does not exist")
             with self.db.transaction():
                 sql = "DELETE FROM notes WHERE id = ?"
                 # Execute delete
                 self.db.execute(sql, [note_id])
         except (DatabaseError, sqlite3.Error, Exception) as e:
             raise DatabaseError(f"Failed to delete note: {str(e)}")
+        
+    def delete_all_notes_in_notebook(self, notebook_id):
+        """
+        Delete all notes in a notebook
+        :param: notebook_id: ID of the notebook which notes belong to
+        :raises: ValidationError: if notebook_id is None or invalid
+        :raises: NotebookNotFoundError: if the notebook does not exist
+        :raises: DatabaseError: if database operation fails
+        """
+        if not isinstance(notebook_id, int) or notebook_id <= 0:
+            raise ValidationError("Invalid notebook ID")
+        # Check whether the notebook exists
+        if not self.__is_notebook_exists(notebook_id):
+            raise NotebookNotFoundError(f"Notebook with ID {notebook_id} does not exist")
+        # Try to delete notes in database
+        try:
+            with self.db.transaction():
+                sql = "DELETE FROM notes WHERE notebook_id = ?"
+                self.db.execute(sql, [notebook_id])
+        except (DatabaseError, sqlite3.Error, Exception) as e:
+            raise DatabaseError(f"Failed to delete notes in Notebook with ID {notebook_id}: {str(e)}")
         
     def get_all_notes_in_notebook(self, notebook_id):
         """

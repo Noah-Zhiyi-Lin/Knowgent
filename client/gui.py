@@ -34,7 +34,7 @@ class KnowgentGUI:
         self.tag_service = TagService(db)  #初始化 TagService
         
         # Inject services
-        self.notebook_service.note_service = self.note_service
+        # self.notebook_service.note_service = self.note_service
         self.note_service.notebook_service = self.notebook_service
         self.note_tag_service.note_service = self.note_service
         self.note_tag_service.tag_service = self.tag_service
