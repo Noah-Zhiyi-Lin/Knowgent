@@ -15,7 +15,7 @@ class TagService:
         :raises TagError: if service initialization fails
         """
         try:
-            self.tag_model = TagModel(db)
+            self.__tag_model = TagModel(db)
         except ValidationError as e:
             raise TagError(f"Failed to initialize TagService: {str(e)}")
         except Exception as e:
@@ -29,7 +29,7 @@ class TagService:
         :return: True if the tag is created successfully, False otherwise
         """
         try:
-            self.tag_model.create_tag(tag_name)
+            self.__tag_model.create_tag(tag_name)
             return True
         except (ValidationError, DuplicateTagError, DatabaseError, Exception) as e:
             raise TagError(f"Failed to create tag {tag_name}: {str(e)}")
@@ -42,8 +42,8 @@ class TagService:
         :return: tag details or None if not found
         """
         try:
-            tag_id = self.tag_model.get_tag_id(tag_name)
-            return self.tag_model.get_tag(tag_id)
+            tag_id = self.__tag_model.get_tag_id(tag_name)
+            return self.__tag_model.get_tag(tag_id)
         except (ValidationError, TagNotFoundError, DatabaseError, Exception) as e:
             raise TagError(f"Failed to get tag {tag_name}: {str(e)}")
 
@@ -56,9 +56,9 @@ class TagService:
         :return: True if the tag is updated successfully, False otherwise
         """
         try:
-            tag_id = self.tag_model.get_tag_id(tag_name)
+            tag_id = self.__tag_model.get_tag_id(tag_name)
             # Update the tag
-            self.tag_model.update_tag(tag_id, new_name)
+            self.__tag_model.update_tag(tag_id, new_name)
             return True
         except (ValidationError, TagNotFoundError, DuplicateTagError, DatabaseError, Exception) as e:
             raise TagError(f"Failed to update tag {tag_name}: {str(e)}")
@@ -71,9 +71,9 @@ class TagService:
         :return: True if the tag is deleted successfully, False otherwise
         """
         try:
-            tag_id = self.tag_model.get_tag_id(tag_name)
+            tag_id = self.__tag_model.get_tag_id(tag_name)
             # Delete the tag (in database)
-            self.tag_model.delete_tag(tag_id)
+            self.__tag_model.delete_tag(tag_id)
             return True
         except (ValidationError, TagNotFoundError, DatabaseError, Exception) as e:
             raise TagError(f"Failed to delete tag {tag_name}: {str(e)}")
@@ -85,7 +85,7 @@ class TagService:
         :return: list of all tag names
         """
         try:
-            tags = self.tag_model.get_all_tags()
+            tags = self.__tag_model.get_all_tags()
             return [tag["tag_name"] for tag in tags]
         except (DatabaseError, Exception) as e:
             raise TagError(f"Failed to get all tags: {str(e)}")

@@ -28,10 +28,16 @@ class KnowgentGUI:
         self.current_note = None
 
         # 初始化后端服务
-        self.notebook_service = NotebookService(db, base_path="MyNotebooks")  # 初始化 NotebookService
+        self.notebook_service = NotebookService(db)  # 初始化 NotebookService
         self.note_service = NoteService(db)  # 初始化 NoteService
         self.note_tag_service = NoteTagService(db)  #初始化 NoteTagService
         self.tag_service = TagService(db)  #初始化 TagService
+        
+        # Inject services
+        self.notebook_service.note_service = self.note_service
+        self.note_service.notebook_service = self.notebook_service
+        self.note_tag_service.note_service = self.note_service
+        self.note_tag_service.tag_service = self.tag_service
         
         self.is_left_frame_visible = False
         # 更新主题配色

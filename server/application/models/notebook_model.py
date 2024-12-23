@@ -34,7 +34,7 @@ class NotebookModel:
             with self.db.transaction():
                 sql = """
                 INSERT INTO notebooks (notebook_name, description)
-                VALUES (?, ?, ?)
+                VALUES (?, ?)
                 """
                 params = [notebook_name, description]
                 self.db.execute(sql, params)

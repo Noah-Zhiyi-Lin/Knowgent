@@ -6,3 +6,4 @@ __pycache__/
 application/database/MyRepository.db
 MyNotebooks/
 *.db
+./MyNotebooks

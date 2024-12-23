@@ -1,6 +1,5 @@
 from pathlib import Path
 from server.application.models.note_model import NoteModel
-from server.application.services.notebook_service import NotebookService
 from server.application.exceptions import (
     ValidationError,
     DatabaseError,
@@ -20,14 +19,25 @@ class NoteService:
         :raises NoteError: if service initialization fails
         """
         try:
-            self.note_model = NoteModel(db)
-            self.notebook_service = NotebookService(db)
-            self.__base_path = self.note_model.db.get_base_path()
-        except (ValidationError, NotebookError) as e:
+            self.__note_model = NoteModel(db)
+            self.__base_path = self.__note_model.db.get_base_path()
+            self.__notebook_service = None
+        except ValidationError as e:
             raise NoteError(f"Failed to initialize NoteService: {str(e)}")
         except Exception as e:
             raise NoteError(f"Unexpected error during NoteService initialization: {str(e)}")
-        
+    
+    # Inject dependency
+    @property
+    def notebook_service(self):
+        if not self.__notebook_service:
+            raise NotebookError("NotebookService not set")
+        return self.__notebook_service
+    
+    @notebook_service.setter
+    def notebook_service(self, service):
+        self.__notebook_service = service
+    
     def create_note(self, title, notebook_name):
         """
         Create a new note
@@ -54,7 +64,7 @@ class NoteService:
                 raise FileSystemError(f"Failed to create note file: {str(e)}")
             # Try to create the note in the database
             try:
-                self.note_model.create_note(title, notebook_id)
+                self.__note_model.create_note(title, notebook_id)
                 return True
             except (
                 ValidationError,
@@ -93,8 +103,8 @@ class NoteService:
             except NotebookError as e:
                 raise e
             notebook_id = notebook["id"]
-            note_id = self.note_model.get_note_id(title, notebook_id)
-            return self.note_model.get_note(note_id)
+            note_id = self.__note_model.get_note_id(title, notebook_id)
+            return self.__note_model.get_note(note_id)
         except (ValidationError, NoteNotFoundError, NotebookError, DatabaseError) as e:
             raise NoteError(f"Failed to get note {title} in notebook {notebook_name}: {str(e)}")
 
@@ -112,10 +122,10 @@ class NoteService:
     #         notebook_id = notebook["id"]
 
     #         # 获取笔记的 ID
-    #         note_id = self.note_model.get_note_id(title, notebook_id)
+    #         note_id = self.__note_model.get_note_id(title, notebook_id)
 
     #         # 获取笔记的详细信息
-    #         note_dict = self.note_model.get_note(note_id)
+    #         note_dict = self.__note_model.get_note(note_id)
 
     #         # 返回笔记的文件路径
     #         return note_dict["file_path"]
@@ -254,7 +264,7 @@ class NoteService:
                 new_file_path = current_file_path.parent / f"{new_title}.md"
             # Update note in the database
             try:
-                self.note_model.update_note(
+                self.__note_model.update_note(
                     note_id = note_id,
                     new_title = new_title if new_title else None,
                     new_notebook_id = new_notebook_id if new_notebook_id else None
@@ -313,7 +323,7 @@ class NoteService:
             except NoteError as e:
                 raise e
             # Delete note in database
-            self.note_model.delete_note(note_id)
+            self.__note_model.delete_note(note_id)
             # Delete note file
             if file_path.exists():
                 try:
@@ -346,7 +356,7 @@ class NoteService:
     #             raise e
     #         notebook_id = notebook["id"]
     #         # Get all notes in the notebook
-    #         return self.note_model.get_all_notes_in_notebook(notebook_id)
+    #         return self.__note_model.get_all_notes_in_notebook(notebook_id)
     #     except (
     #         NotebookError,
     #         ValidationError,
@@ -363,7 +373,7 @@ class NoteService:
         :return: all notes in the database
         """
         try:
-            return self.note_model.get_all_notes()
+            return self.__note_model.get_all_notes()
         except (DatabaseError, Exception) as e:
             raise NoteError(f"Failed to get all notes: {str(e)}")
 
@@ -381,7 +391,7 @@ class NoteService:
             except NotebookError as e:
                 raise e
             notebook_id = notebook["id"]
-            return self.note_model.get_all_notes_in_notebook(notebook_id)
+            return self.__note_model.get_all_notes_in_notebook(notebook_id)
         except (
             NotebookError,
             ValidationError,

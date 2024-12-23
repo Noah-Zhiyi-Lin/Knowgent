@@ -4,7 +4,7 @@ from server.database.database import Database
 
 def main():
     # 初始化数据库
-    db = Database("MyRepository")
+    db = Database("./MyNotebooks")
     db.initialize()
 
     # 初始化主窗口

@@ -1,23 +1,26 @@
 from pathlib import Path
 import sqlite3
 from contextlib import contextmanager
-from server.application.exceptions import DatabaseError
+from server.application.exceptions import (
+    ValidationError,
+    DatabaseError)
 
 class Database:
-    def __init__(self, repository_name, base_path = '.'):
+    def __init__(self, base_path):
         """
         Initialize the database object
-        :param repository_name: name of the notebook repository
         :base_path: the path containing all notebooks and notes
         """
+        if not base_path:
+            raise ValueError("Base path not set")
+        self.__base_path = base_path
+        self.__repository_name = Path(base_path).name
         # Path of the database file (attention that the name of database file is fixed)
-        self.__db_path = Path(__file__).parent / f"{repository_name}.db"
+        self.__db_path = Path(__file__).parent / f"{self.__repository_name}.db"
         # Connection to the database
         self.__connection = None
         # The cursor of the database
         self.__cursor = None
-        # Base path
-        self.__base_path = base_path
         # Execute initialization
         self.initialize()
 

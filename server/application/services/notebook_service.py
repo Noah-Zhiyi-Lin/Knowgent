@@ -1,6 +1,5 @@
 from pathlib import Path
 from server.application.models.notebook_model import NotebookModel
-from server.application.services.note_service import NoteService
 from server.application.exceptions import (
     ValidationError,
     DatabaseError,
@@ -19,14 +18,24 @@ class NotebookService:
         :rasises NotebookError: if service initialization fails
         """
         try:
-            self.notebook_model = NotebookModel(db)
-            self.__base_path = self.notebook_model.db.get_base_path()
-            self.note_service = NoteService(db)
+            self.__notebook_model = NotebookModel(db)
+            self.__base_path = self.__notebook_model.db.get_base_path()
+            self.__note_service = None
         except ValidationError as e:
             raise NotebookError(f"Failed to initialize NotebookService: {str(e)}")
         except Exception as e:
             raise NotebookError(f"Unexcepted error during NotebookService initialization: {str(e)}")
         
+    # Inject dependency
+    @property
+    def note_service(self):
+        if not self.__note_service:
+            raise NoteError("NoteService not set")
+    
+    @note_service.setter
+    def note_service(self, service):
+        self.__note_service = service
+    
     def create_notebook(self, notebook_name, description):
         """
         Create a new notebook
@@ -43,7 +52,7 @@ class NotebookService:
             except OSError as e:
                 raise FileSystemError(f"Failed to create notebook directory: {str(e)}")
             # Create the notebook in the database
-            self.notebook_model.create_notebook(
+            self.__notebook_model.create_notebook(
                 notebook_name = notebook_name,
                 description = description
             )
@@ -68,8 +77,8 @@ class NotebookService:
         :return: notebook details as a dictionary or None if not found
         """
         try:
-            notebook_id = self.notebook_model.get_notebook_id(notebook_name)
-            return self.notebook_model.get_notebook(notebook_id)
+            notebook_id = self.__notebook_model.get_notebook_id(notebook_name)
+            return self.__notebook_model.get_notebook(notebook_id)
         except (ValidationError, NotebookNotFoundError, DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get notebook {notebook_name}: {str(e)}")
         
@@ -83,7 +92,7 @@ class NotebookService:
         :return: True if the notebook is updated successfully, False otherwise
         """
         try:
-            notebook_id = self.notebook_model.get_notebook_id(notebook_name)
+            notebook_id = self.__notebook_model.get_notebook_id(notebook_name)
             # Change the path of the notebook if the new name is given
             new_path = None
             if new_name:
@@ -93,7 +102,7 @@ class NotebookService:
                 new_path = Path(self.__base_path) / new_name
             try:
                 # Update notebook in the database
-                self.notebook_model.update_notebook(
+                self.__notebook_model.update_notebook(
                     notebook_id = notebook_id,
                     new_name = new_name,
                     new_description = new_description
@@ -143,10 +152,10 @@ class NotebookService:
         :return: True if the notebook is deleted successfully, False otherwise
         """
         try:
-            notebook_id = self.notebook_model.get_notebook_id(notebook_name)
+            notebook_id = self.__notebook_model.get_notebook_id(notebook_name)
             notebook_path = Path(self.__base_path) / notebook_name
             # Delete the notebook from the database
-            self.notebook_model.delete_notebook(notebook_id)
+            self.__notebook_model.delete_notebook(notebook_id)
             # Delete all related notes
             try:
                 # Get all notes belong to current notebook
@@ -175,7 +184,7 @@ class NotebookService:
         :return: list of all notebooks as dictionaries
         """
         try:
-            return self.notebook_model.get_all_notebooks()
+            return self.__notebook_model.get_all_notebooks()
         except (DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get all notebooks: {str(e)}")
 
