@@ -13,7 +13,7 @@ class llmagent:
     def __init__(self,root):
         self.Ollama = Ollama()
         self.botstate = False
-        self.bots=['qwen2.5:0.5b', 'llama3.2:1b', 'nomic-embed-text', 'mxbai-embed-large', ]
+        self.bots = self.Ollama.get_model_list()
         self.image_refs=[]
         self.image_path=None
         self.thumbnail_label=None
@@ -334,7 +334,7 @@ class llmagent:
                 self.cancel_button.destroy()
                 self.cancel_button = None
             
-            if not user_text == self.placeholder:
+            if user_text and not user_text == self.placeholder:
                 self.input_entry.delete("1.0", tk.END)
                 self.add_message("user", user_text)
             mesg=self.add_message("message","...")
