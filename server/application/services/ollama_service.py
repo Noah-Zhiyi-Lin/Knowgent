@@ -168,16 +168,14 @@ class OllamaService:
                 )
             else:
                 # Encode the image to base64 and add it to the message
-                
-                
                 try:
                     image_base64 = self.__encode_image_to_base64(image_path)
                     print(f"Image {image_path} transferred to base64")
                     messages.append(
                         {
                             "role": "user",
-                            "content": f"An image has been sent hereby, please reply in according to the content of this image. {prompt}",
-                            "image": [image_base64]
+                            "content": prompt,
+                            "images": [image_base64]
                         }
                     )
                 except OllamaError as e:
