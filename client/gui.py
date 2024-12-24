@@ -988,7 +988,7 @@ class KnowgentGUI:
     def toggle_chat(self):
         if not self.chat_mode:
             try:
-                self.chat.check_ollama() # 显示左侧窗口
+                self.chat.check_ollama() 
                 self.paned_window.add(self.chat_window,weight=5)
             except Exception as e:
                 self.chat_mode = not self.chat_mode

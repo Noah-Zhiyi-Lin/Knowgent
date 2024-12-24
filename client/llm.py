@@ -47,9 +47,8 @@ class llmagent:
             
         def build_menu():
             self.usable_bot=self.Ollama.get_model_list()
-            menulist=self.dropdown_menu.children.values()
-            for item in menulist:
-                self.dropdown_menu.delete(item)
+            print("ttt")
+            self.dropdown_menu.delete(0, "end")
             for bot in self.usable_bot:
                 tick_icon = PhotoImage(file="./client/src/approved.png")
                 self.dropdown_menu.add_command(label=bot+" "*10, image=tick_icon, font=("Arial", 14), compound=tk.RIGHT, command=lambda p=bot: on_person_selected(p),)
@@ -60,9 +59,9 @@ class llmagent:
                     self.dropdown_menu.add_command(label=bot+" "*10, font=("Arial", 14), command=lambda p=bot: on_person_selected(p))
             # 将菜单关联到 Menubutton
             self.dropdown_button.config(menu=self.dropdown_menu)
+
         try:
             build_menu()
-            
         except OllamaError as e:
             raise e
 
