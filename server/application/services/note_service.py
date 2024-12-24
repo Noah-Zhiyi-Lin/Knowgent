@@ -195,7 +195,6 @@ class NoteService:
         try:
             # Try to get the path of the note file
             file_path = self.get_note_file_path(title, notebook_name)
-            print(file_path)
 
             # Check whether the file exists
             if not Path(file_path).exists():

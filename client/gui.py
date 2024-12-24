@@ -16,12 +16,14 @@ from server.application.services.tag_service import TagService
 from server.application.exceptions import NoteTagError
 
 class KnowgentGUI:
-    def __init__(self, root, db):
+    def __init__(self, root, db, base_path):
         self.root = root
         self.text_processor = TextProcessor()
         self.markdown_mode = False
         self.chat_mode=False
-        self.chat=llmagent(root)
+        self.base_path=base_path
+        self.chat=llmagent(root,self.base_path)
+        
         
         #当前打开的笔记/笔记本
         self.current_notebook = None
@@ -993,7 +995,6 @@ class KnowgentGUI:
             except Exception as e:
                 self.chat_mode = not self.chat_mode
                 messagebox.showinfo("Error", "Please open ollama before chatting.")
-                print(e)
             
         else:
             self.paned_window.remove(self.chat_window) # 隐藏左侧窗口

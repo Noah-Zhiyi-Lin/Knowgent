@@ -10,7 +10,7 @@ import threading
 
 class llmagent:
 
-    def __init__(self,root):
+    def __init__(self,root,base_path):
         self.Ollama = Ollama()
         self.botstate = False
         self.bots=['qwen2.5:0.5b', 'llama3.2:1b', 'nomic-embed-text', 'mxbai-embed-large', ]
@@ -20,6 +20,7 @@ class llmagent:
         self.style=ttk.Style()
         self.editor_content=None
         self.root=root
+        self.base_path=base_path
         
         
 
@@ -47,7 +48,6 @@ class llmagent:
             
         def build_menu():
             self.usable_bot=self.Ollama.get_model_list()
-            print("ttt")
             self.dropdown_menu.delete(0, "end")
             for bot in self.usable_bot:
                 tick_icon = PhotoImage(file="./client/src/approved.png")
@@ -276,9 +276,6 @@ class llmagent:
             
             lines = ((text_width+2) // max_chars) + 1  # 超过最大宽度会换行
             text_lines = lines+msg_text.count("\n")+msg_text.count("\r") # 加上显式换行符的行数
-            print(text_lines)
-            print(msg_text.count("\n"))
-            print(msg_text)
             
             message_widget.config(height=text_lines)
             
@@ -391,7 +388,7 @@ class llmagent:
 
     def upload_image(self): 
         try:       
-            init_dir = "MyNotebooks"
+            init_dir =  self.base_path
             file_path = filedialog.askopenfilename(
                 initialdir=init_dir,
                 title="Select an image",
@@ -425,7 +422,8 @@ class llmagent:
                 self.cancel_button.image=cancel_icon
 
         except Exception as e:
-            print(f"Error: {e}")
+            # print(f"Error: {e}")
+            pass
 
     def cancel_upload(self):
         # 删除缩略图和取消按钮，清空图片路径

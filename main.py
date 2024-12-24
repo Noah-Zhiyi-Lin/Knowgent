@@ -21,7 +21,7 @@ def main():
     root = tk.Tk()
     root.title("Knowgent v0.4.2")
     root.geometry("1200x720")
-    app = KnowgentGUI(root, db)
+    app = KnowgentGUI(root, db,base_path)
     root.mainloop()
 
 if __name__ == "__main__":

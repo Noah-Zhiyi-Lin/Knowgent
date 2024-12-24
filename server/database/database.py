@@ -15,7 +15,6 @@ class Database:
             raise ValueError("Base path not set")
         self.__base_path = base_path
         self.__repository_name = Path(base_path).name
-        print(self.__repository_name)
         # Path of the database file (attention that the name of database file is fixed)
         self.__db_path = Path(__file__).parent / f"{self.__repository_name}.db"
         # Connection to the database
