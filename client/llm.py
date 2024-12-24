@@ -21,6 +21,7 @@ class llmagent:
         self.editor_content=None
         self.root=root
         
+        
 
     def check_ollama(self):
         def check_and_pull(bot):
@@ -33,6 +34,7 @@ class llmagent:
             if self.botstate:
                 self.menu_title.set(bot)
                 self.model_name = bot
+                build_menu()
                 self.send_button.config(state='normal')
             else:
                 self.menu_title.set(f"{bot}:unavailable")
@@ -43,21 +45,23 @@ class llmagent:
             thread = threading.Thread(target=check_and_pull, args=(bot,))
             thread.start()
             
-        try:
-            
+        def build_menu():
             self.usable_bot=self.Ollama.get_model_list()
             for item in self.dropdown_menu.children.values():
                 self.dropdown_menu.delete(item)
             for bot in self.usable_bot:
                 tick_icon = PhotoImage(file="./client/src/approved.png")
-                self.dropdown_menu.add_command(label=bot+"                                ", image=tick_icon, font=("Arial", 14), compound=tk.RIGHT, command=lambda p=bot: on_person_selected(p),)
+                self.dropdown_menu.add_command(label=bot+" "*10, image=tick_icon, font=("Arial", 14), compound=tk.RIGHT, command=lambda p=bot: on_person_selected(p),)
                 self.image_refs.append(tick_icon)
             # 动态生成菜单项，设置与窗口等宽
             for bot in self.bots:
                 if bot not in self.usable_bot:
-                    self.dropdown_menu.add_command(label=bot+"                                ", font=("Arial", 14), command=lambda p=bot: on_person_selected(p))
+                    self.dropdown_menu.add_command(label=bot+" "*10, font=("Arial", 14), command=lambda p=bot: on_person_selected(p))
             # 将菜单关联到 Menubutton
             self.dropdown_button.config(menu=self.dropdown_menu)
+        try:
+            build_menu()
+            
         except OllamaError as e:
             raise e
 
@@ -348,7 +352,7 @@ class llmagent:
                 self.input_entry.delete("1.0", tk.END)
                 self.add_message("user", user_text)
             mesg=self.add_message("message","...")
-            thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg, True))
+            thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg, True))            
             thread.start()
             
             
@@ -370,6 +374,7 @@ class llmagent:
         user_text = editor_text.strip()
         #print(user_text)
         if user_text and self.botstate:
+            self.new_chat()
             input = "Please generate an outline for the following note. Organize your reply in markdown grammar. Make sure the language of your response be the same as the following note.\n\n" + user_text
             mesg=self.add_message("message","Generating outline, please wait...")
             thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg, False))
@@ -378,6 +383,7 @@ class llmagent:
     def create_tag(self, editor_text):
         user_text = editor_text.strip()
         if user_text and self.botstate:
+            self.new_chat()
             input = "请基于以下文本生成2-5个有代表性的关键词，每个关键词以分号作为分割, \n" + user_text
             mesg=self.add_message("message","Generating tags, please wait...")
             thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg, False))
@@ -433,6 +439,7 @@ class llmagent:
     def new_chat(self):
         for widget in self.chat_frame_inner.winfo_children():
             widget.destroy()
+        
         if self.input_entry.get("1.0", "end-1c") and not self.input_entry.get("1.0", "end-1c") == self.placeholder:
             self.input_entry.delete('1.0',tk.END)
         
