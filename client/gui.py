@@ -986,23 +986,14 @@ class KnowgentGUI:
 
     # ================= 悬浮按钮功能 ================= #
     def toggle_chat(self):
-        self.chat_mode = not self.chat_mode
-        if self.chat_mode:
-            self.paned_window.add(self.chat_window,weight=5) # 显示左侧窗口
-
+        if not self.chat_mode:
+            try:
+                self.chat.check_ollama() # 显示左侧窗口
+                self.paned_window.add(self.chat_window,weight=5)
+            except Exception:
+                self.chat_mode = not self.chat_mode
+                messagebox.showinfo("Error", "Please open ollama before chatting.")
+            
         else:
             self.paned_window.remove(self.chat_window) # 隐藏左侧窗口
-
-
-        """切换Markdown预览模式"""
-        self.markdown_mode = not self.markdown_mode
-        
-        if self.markdown_mode:
-            # 启用预览模式
-            self.markdown_button.configure(text="Hide")
-            self.paned_window.add(self.preview_frame,weight=9)  # 添加预览窗口
-            self.update_preview()  # 更新预览内容
-        else:
-            # 禁用预览模式
-            self.markdown_button.configure(text="Preview")
-            self.paned_window.remove(self.preview_frame)  # 移除预览窗口
+        self.chat_mode = not self.chat_mode

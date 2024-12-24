@@ -13,58 +13,66 @@ class llmagent:
     def __init__(self,root):
         self.Ollama = Ollama()
         self.botstate = False
-        self.bots = self.Ollama.get_model_list()
+        self.bots=['qwen2.5:0.5b', 'llama3.2:1b', 'nomic-embed-text', 'mxbai-embed-large', ]
         self.image_refs=[]
         self.image_path=None
         self.thumbnail_label=None
         self.style=ttk.Style()
         self.editor_content=None
         self.root=root
+        
+
+    def check_ollama(self):
+        def check_and_pull(bot):
+            if bot in self.usable_bot:
+                self.botstate = True
+            else:
+                self.botstate=False
+                self.send_button.config(state='disabled')
+                self.botstate=self.Ollama.pull(bot)
+            if self.botstate:
+                self.menu_title.set(bot)
+                self.model_name = bot
+                self.send_button.config(state='normal')
+            else:
+                self.menu_title.set(f"{bot}:unavailable")
+
+        # 添加 OptionMenu 下拉菜单
+        def on_person_selected(bot):
+            self.menu_title.set("pulling model...")
+            thread = threading.Thread(target=check_and_pull, args=(bot,))
+            thread.start()
+            
+        try:
+            
+            self.usable_bot=self.Ollama.get_model_list()
+            for bot in self.usable_bot:
+                tick_icon = PhotoImage(file="./client/src/approved.png")
+                self.dropdown_menu.add_command(label=bot+"                                ", image=tick_icon, font=("Arial", 14), compound=tk.RIGHT, command=lambda p=bot: on_person_selected(p),)
+                self.image_refs.append(tick_icon)
+            # 动态生成菜单项，设置与窗口等宽
+            for bot in self.bots:
+                if bot not in self.usable_bot:
+                    self.dropdown_menu.add_command(label=bot+"                                ", font=("Arial", 14), command=lambda p=bot: on_person_selected(p))
+            # 将菜单关联到 Menubutton
+            self.dropdown_button.config(menu=self.dropdown_menu)
+        except OllamaError as e:
+            raise e
 
     def create_chat(self, frameroot):
         self.chat=ttk.Frame(frameroot, style="Custom.TFrame")
         # ================= 聊天显示区域（带滚动条） ================= #
-        chat_frame = tk.Frame(self.chat, bg="white")
-        chat_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.chatframe = tk.Frame(self.chat, bg="white")
+        self.chatframe.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        
-        menu_title=tk.StringVar()
-        menu_title.set("My model")
+        self.menu_title=tk.StringVar()
+        self.menu_title.set("My model")
 
-        def check_and_pull(bot):
-            self.botstate=False
-            self.send_button.config(state='disabled')
-            try:
-                self.botstate=self.Ollama.pull(bot)
-            except OllamaError as e:
-                messagebox.showinfo("Error", "Please open ollama before choosing a model.")
-                menu_title.set("My model")
-                return 
-            if self.botstate:
-                menu_title.set(bot)
-                self.model_name = bot
-                self.send_button.config(state='normal')
-            else:
-                menu_title.set(f"{bot}:unavailable")
+        #self.check_ollama()
 
-        # 添加 OptionMenu 下拉菜单
-        def on_person_selected(bot):
-            menu_title.set("pulling model...")
-            thread = threading.Thread(target=check_and_pull, args=(bot,))
-            thread.start()
-            
-
-        dropdown_button = tk.Menubutton(chat_frame, textvariable=menu_title, justify='left', font=("Arial", 12), bg="#DEDEDE", fg="black", relief="flat")
-        dropdown_button.pack(side=tk.TOP, fill=tk.BOTH, pady=10, padx=10)
-        dropdown_menu = tk.Menu(dropdown_button, tearoff=0, font=("Arial", 14))
-
-        
-        # 动态生成菜单项，设置与窗口等宽
-        for bot in self.bots:
-            dropdown_menu.add_command(label=bot, font=("Arial", 14), command=lambda p=bot: on_person_selected(p))
-
-        # 将菜单关联到 Menubutton
-        dropdown_button.config(menu=dropdown_menu)
+        self.dropdown_button = tk.Menubutton(self.chatframe, textvariable=self.menu_title, justify='left', font=("Arial", 12), bg="#DEDEDE", fg="black", relief="flat")
+        self.dropdown_button.pack(side=tk.TOP, fill=tk.BOTH, pady=10, padx=10)
+        self.dropdown_menu = tk.Menu(self.dropdown_button, tearoff=0, font=("Arial", 14))        
 
         self.style.configure('TScrollbar',
                     background='#FFFFFF',
@@ -91,14 +99,14 @@ class llmagent:
         )
 
         # 滚动条
-        scrollbar = ttk.Scrollbar(chat_frame, orient="vertical",style='TScrollbar')
+        scrollbar = ttk.Scrollbar(self.chatframe, orient="vertical",style='TScrollbar')
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        h_scrollbar = ttk.Scrollbar(chat_frame, orient="horizontal", style='TScrollbar')
+        h_scrollbar = ttk.Scrollbar(self.chatframe, orient="horizontal", style='TScrollbar')
         h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
 
 
         # Canvas实现滚动
-        self.chat_canvas = tk.Canvas(chat_frame, bg="white",xscrollcommand=h_scrollbar.set, yscrollcommand=scrollbar.set, highlightthickness=0)
+        self.chat_canvas = tk.Canvas(self.chatframe, bg="white",xscrollcommand=h_scrollbar.set, yscrollcommand=scrollbar.set, highlightthickness=0)
         self.chat_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         scrollbar.config(command=self.chat_canvas.yview)
@@ -128,7 +136,7 @@ class llmagent:
         def resize_message_canvas(event):
             canvas_width = max(self.chat_canvas.winfo_width(), self.chat_frame_inner.winfo_reqwidth())
             self.chat_canvas.itemconfig(self.window, width=canvas_width)
-            pass
+            
 
         self.chat_canvas.bind("<Configure>", resize_message_canvas)
 
@@ -341,14 +349,19 @@ class llmagent:
             thread = threading.Thread(target=self.get_bot_reply, args=(user_text,mesg, True))
             thread.start()
             
+            
             # 滚动到底部
             
 
     def get_bot_reply(self, user_text, mesg, if_include):
+        self.botstate = False
+        self.send_button.config(state="disabled")
         reply = self.Ollama.chat(self.model_name, user_text, if_include, image_path=self.image_path)
         # 在主线程中更新 UI
         self.image_path = None
         mesg.destroy()
+        self.botstate = True
+        self.send_button.config(state="normal")
         self.add_message("bot", reply)
     
     def create_outline(self, editor_text):
