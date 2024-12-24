@@ -990,9 +990,10 @@ class KnowgentGUI:
             try:
                 self.chat.check_ollama() # 显示左侧窗口
                 self.paned_window.add(self.chat_window,weight=5)
-            except Exception:
+            except Exception as e:
                 self.chat_mode = not self.chat_mode
                 messagebox.showinfo("Error", "Please open ollama before chatting.")
+                print(e)
             
         else:
             self.paned_window.remove(self.chat_window) # 隐藏左侧窗口

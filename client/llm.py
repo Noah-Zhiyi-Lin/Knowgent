@@ -46,6 +46,8 @@ class llmagent:
         try:
             
             self.usable_bot=self.Ollama.get_model_list()
+            for item in self.dropdown_menu.children.values():
+                self.dropdown_menu.delete(item)
             for bot in self.usable_bot:
                 tick_icon = PhotoImage(file="./client/src/approved.png")
                 self.dropdown_menu.add_command(label=bot+"                                ", image=tick_icon, font=("Arial", 14), compound=tk.RIGHT, command=lambda p=bot: on_person_selected(p),)
