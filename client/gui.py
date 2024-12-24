@@ -980,10 +980,7 @@ class KnowgentGUI:
         
         # 取哈希值的前6个字符作为颜色值
         color_hex = hash_hex[:6]
-        
         return f'#{color_hex}'
-
-
 
     # ================= 悬浮按钮功能 ================= #
     def toggle_chat(self):

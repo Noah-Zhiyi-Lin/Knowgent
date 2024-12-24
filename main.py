@@ -10,7 +10,7 @@ def main():
     # 初始化主窗口
     root = tk.Tk()
     root.title("Knowgent v0.4.2")
-    root.geometry("1200x800")
+    root.geometry("1200x720")
     app = KnowgentGUI(root, db)
     root.mainloop()
 
