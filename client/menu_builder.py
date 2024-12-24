@@ -64,16 +64,16 @@ class MenuBuilder:
         edit_menu.add_command(label="Find", command=self.gui.find_text, accelerator="Ctrl+F")
         edit_menu.add_command(label="Replace", command=self.gui.replace_text, accelerator="Ctrl+H")
 
-        view_menu.add_checkbutton(
-            label="Dark Theme",
-            variable=self.theme_var,
-            command=self.toggle_theme
-        )
+        # view_menu.add_checkbutton(
+        #     label="Dark Theme",
+        #     variable=self.theme_var,
+        #     command=self.toggle_theme
+        # )
 
         # 添加级联菜单
         menu_bar.add_cascade(label="File", menu=file_menu)
         menu_bar.add_cascade(label="Edit", menu=edit_menu)
-        menu_bar.add_cascade(label="View", menu=view_menu)
+        #menu_bar.add_cascade(label="View", menu=view_menu)
 
         # 配置根窗口的菜单
         self.root.config(menu=menu_bar)
@@ -97,7 +97,7 @@ class MenuBuilder:
             )
             
         # 配置所有菜单
-        for menu in [self.menu_bar, self.file_menu, self.edit_menu, self.view_menu]:
+        for menu in [self.menu_bar, self.file_menu, self.edit_menu]:
             configure_menu(menu)
             
         # 特别处理顶层菜单栏
@@ -112,7 +112,6 @@ class MenuBuilder:
         
         # 强制更新菜单显示
         self.root.update_idletasks()
-        
         # 尝试更新顶层菜单的外观
         try:
             self.root.tk.call('tk_menuBar', self.menu_bar, bg_color)

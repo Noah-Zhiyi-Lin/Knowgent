@@ -363,7 +363,7 @@ class llmagent:
     def create_tag(self, editor_text):
         user_text = editor_text.strip()
         if user_text and self.botstate:
-            input = "Please generate 2 to 5 tags that can properly classify the following note into a specific field. Each tag, which is a short noun word or noun phrase without further explanation, should be put in a seperate line. Don't reply anything other than these tags. Don't reply in markdown format. Make sure the language of your response be the same as the following note. Don't add number before tags.\n\n" + user_text
+            input = "请基于以下文本生成2-5个有代表性的关键词，每个关键词以分号作为分割, \n" + user_text
             mesg=self.add_message("message","Generating tags, please wait...")
             thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg, False))
             thread.start()
