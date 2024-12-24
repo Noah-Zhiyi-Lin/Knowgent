@@ -1,3 +1,4 @@
+.gitignore
 .idea/
 server/application/controllers
 .venv/
