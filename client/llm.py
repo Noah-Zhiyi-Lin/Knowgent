@@ -324,6 +324,7 @@ class llmagent:
         if self.botstate:
             user_text = self.input_entry.get("1.0", "end-1c").strip()
             #print(len(user_text))
+            
             if not self.image_path and not user_text:
                 return
             if self.image_path:
@@ -333,7 +334,7 @@ class llmagent:
                 self.cancel_button.destroy()
                 self.cancel_button = None
             
-            if user_text:
+            if not user_text == self.placeholder:
                 self.input_entry.delete("1.0", tk.END)
                 self.add_message("user", user_text)
             mesg=self.add_message("message","...")
@@ -399,7 +400,7 @@ class llmagent:
                     relief="flat",
                     bg="#DEDEDE"
                 )
-                self.cancel_button.grid(row=0, column=3, padx=5, pady=5)
+                self.cancel_button.grid(row=0, column=4, padx=5, pady=5)
                 self.cancel_button.image=cancel_icon
 
         except Exception as e:
