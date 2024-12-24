@@ -47,7 +47,8 @@ class llmagent:
             
         def build_menu():
             self.usable_bot=self.Ollama.get_model_list()
-            for item in self.dropdown_menu.children.values():
+            menulist=self.dropdown_menu.children.values()
+            for item in menulist:
                 self.dropdown_menu.delete(item)
             for bot in self.usable_bot:
                 tick_icon = PhotoImage(file="./client/src/approved.png")
