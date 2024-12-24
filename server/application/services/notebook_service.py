@@ -1,29 +1,44 @@
 from pathlib import Path
 from server.application.models.notebook_model import NotebookModel
+from server.application.models.note_model import NoteModel
 from server.application.exceptions import (
     ValidationError,
     DatabaseError,
     NotebookError,
+    NoteError,
     NotebookNotFoundError,
     DuplicateNotebookError,
     FileSystemError
 )
 
 class NotebookService:
-    def __init__(self, db, base_path='.'):
+    def __init__(self, db):
         """
         Initialize the NotebookService with a connection to the database
         :param db: connection to the database
         :rasises NotebookError: if service initialization fails
         """
         try:
-            self.notebook_model = NotebookModel(db)
-            self.__base_path = base_path
+            self.__notebook_model = NotebookModel(db)
+            self.__note_model = NoteModel(db)
+            self.__base_path = self.__notebook_model.db.get_base_path()
+            # self.__note_service = None
         except ValidationError as e:
             raise NotebookError(f"Failed to initialize NotebookService: {str(e)}")
         except Exception as e:
             raise NotebookError(f"Unexcepted error during NotebookService initialization: {str(e)}")
         
+    # # Inject dependency
+    # @property
+    # def note_service(self):
+    #     if not self.__note_service:
+    #         raise NoteError("NoteService not set")
+    #     return self.__note_service
+    # 
+    # @note_service.setter
+    # def note_service(self, service):
+    #     self.__note_service = service
+    
     def create_notebook(self, notebook_name, description):
         """
         Create a new notebook
@@ -40,9 +55,8 @@ class NotebookService:
             except OSError as e:
                 raise FileSystemError(f"Failed to create notebook directory: {str(e)}")
             # Create the notebook in the database
-            self.notebook_model.create_notebook(
+            self.__notebook_model.create_notebook(
                 notebook_name = notebook_name,
-                notebook_path = str(notebook_path),
                 description = description
             )
             return True
@@ -66,8 +80,8 @@ class NotebookService:
         :return: notebook details as a dictionary or None if not found
         """
         try:
-            notebook_id = self.notebook_model.get_notebook_id(notebook_name)
-            return self.notebook_model.get_notebook(notebook_id)
+            notebook_id = self.__notebook_model.get_notebook_id(notebook_name)
+            return self.__notebook_model.get_notebook(notebook_id)
         except (ValidationError, NotebookNotFoundError, DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get notebook {notebook_name}: {str(e)}")
         
@@ -81,8 +95,9 @@ class NotebookService:
         :return: True if the notebook is updated successfully, False otherwise
         """
         try:
-            notebook_id = self.notebook_model.get_notebook_id(notebook_name)
+            notebook_id = self.__notebook_model.get_notebook_id(notebook_name)
             # Change the path of the notebook if the new name is given
+            current_path = None
             new_path = None
             if new_name:
                 if(new_name == notebook_name):
@@ -90,29 +105,38 @@ class NotebookService:
                 current_path = Path(self.__base_path) / notebook_name
                 new_path = Path(self.__base_path) / new_name
             try:
+                # Change notebook path if new path is given
+                if new_path and current_path and current_path.exists():
+                    current_path.rename(new_path)
+                else:
+                    raise FileSystemError(f"Can note rename the directory of notebook {notebook_name}")
                 # Update notebook in the database
-                self.notebook_model.update_notebook(
+                self.__notebook_model.update_notebook(
                     notebook_id = notebook_id,
                     new_name = new_name,
-                    new_path = str(new_path) if new_path else None,
                     new_description = new_description
                 )
-                # Change notebook path if new path is given
-                if new_path:
-                    current_path.rename(new_path)
                 return True
             except (
                 ValidationError,
                 NotebookNotFoundError,
                 DuplicateNotebookError,
+                FileSystemError,
                 DatabaseError,
             ) as e:
                 raise e
         except (ValidationError, 
                 NotebookNotFoundError,
                 DuplicateNotebookError,
+                FileSystemError,
                 DatabaseError,
                 Exception) as e:
+            # Recover notes in database if any error happens
+            self.__notebook_model.update_notebook(
+                notebook_id = notebook_id,
+                new_name = notebook_name,
+                new_description = None
+            )
             # Restore the original directory if update fails
             if new_path and new_path.exists():
                 new_path.rename(current_path)
@@ -126,11 +150,13 @@ class NotebookService:
         :return: True if the notebook is deleted successfully, False otherwise
         """
         try:
-            notebook_id = self.notebook_model.get_notebook_id(notebook_name)
+            notebook_id = self.__notebook_model.get_notebook_id(notebook_name)
             notebook_path = Path(self.__base_path) / notebook_name
+            # Delete all related notes in database
+            self.__note_model.delete_all_notes_in_notebook(notebook_id)
             # Delete the notebook from the database
-            self.notebook_model.delete_notebook(notebook_id)
-            # Delete the notebook directory
+            self.__notebook_model.delete_notebook(notebook_id)
+            # Delete the notebook directory (delete all notes belong to the notebook at the same time)
             if notebook_path.exists():
                 self._remove_dir(notebook_path)
             return True
@@ -148,7 +174,7 @@ class NotebookService:
         :return: list of all notebooks as dictionaries
         """
         try:
-            return self.notebook_model.get_all_notebooks()
+            return self.__notebook_model.get_all_notebooks()
         except (DatabaseError, Exception) as e:
             raise NotebookError(f"Failed to get all notebooks: {str(e)}")
 

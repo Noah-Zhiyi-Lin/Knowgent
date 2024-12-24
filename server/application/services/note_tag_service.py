@@ -1,6 +1,4 @@
 from server.application.models.note_tag_model import NoteTagModel
-from server.application.services.note_service import NoteService
-from server.application.services.tag_service import TagService
 from server.application.models.note_model import NoteModel
 from server.application.exceptions import (
     ValidationError,
@@ -21,14 +19,35 @@ class NoteTagService:
         :raises NoteTagError: if service initialization fails
         """
         try:
-            self.note_tag_model = NoteTagModel(db)
-            self.note_service = NoteService(db)
-            self.tag_service = TagService(db)
-            self.note_model = NoteModel(db)
+            self.__note_tag_model = NoteTagModel(db)
+            self.__note_service = None
+            self.__tag_service = None
+            self.__note_model = NoteModel(db)
         except (ValidationError, NoteError, TagError) as e:
             raise NoteTagError(f"Failed to initialize NoteTagService: {str(e)}")
         except Exception as e:
             raise NoteTagError(f"Unexpected error during NoteTagService initialization: {str(e)}")
+        
+    # Inject dependencies
+    @property
+    def note_service(self):
+        if not self.__note_service:
+            raise NoteError("NoteService not set")
+        return self.__note_service
+    
+    @note_service.setter
+    def note_service(self, service):
+        self.__note_service = service
+        
+    @property
+    def tag_service(self):
+        if not self.__tag_service:
+            raise TagError("TagService not set")
+        return self.__tag_service
+
+    @tag_service.setter
+    def tag_service(self, service):
+        self.__tag_service = service
 
     def add_tag_to_note(self, title, notebook_name, tag_name):
         """
@@ -53,7 +72,7 @@ class NoteTagService:
                 raise e
             tag_id = tag["id"]
             # Try to add the tag to the note
-            self.note_tag_model.add_tag_to_note(note_id, tag_id)
+            self.__note_tag_model.add_tag_to_note(note_id, tag_id)
             return True
         except (
             NoteError,
@@ -84,7 +103,7 @@ class NoteTagService:
             except NoteError as e:
                 raise e
             note_id = note["id"]
-            return self.note_tag_model.get_tags_for_note(note_id)
+            return self.__note_tag_model.get_tags_for_note(note_id)
         except (NoteError, ValidationError, NoteNotFoundError, DatabaseError, Exception) as e:
             raise NoteTagError(
                 f"Failed to get tags for note {title} in notebook {notebook_name}: {str(e)}"
@@ -104,8 +123,8 @@ class NoteTagService:
             except TagError as e:
                 raise e
             tag_id = tag["id"]
-            note_ids =  self.note_tag_model.get_notes_for_tag(tag_id)
-            notes = [self.note_model.get_note(note_id) for note_id in note_ids]
+            note_ids =  self.__note_tag_model.get_notes_for_tag(tag_id)
+            notes = [self.__note_model.get_note(note_id) for note_id in note_ids]
             return notes
         except (TagError, ValidationError, TagNotFoundError, DatabaseError, Exception) as e:
             raise NoteTagError(f"Failed to get notes for tag {tag_name}: {str(e)}")
@@ -133,7 +152,7 @@ class NoteTagService:
                 raise e
             tag_id = tag["id"]
             # Remove the tag from the note
-            self.note_tag_model.remove_tag_from_note(note_id, tag_id)
+            self.__note_tag_model.remove_tag_from_note(note_id, tag_id)
             return True
         except (
             NoteError,
@@ -164,7 +183,7 @@ class NoteTagService:
                 raise e
             note_id = note["id"]
             # Remove all tags associated with the note
-            self.note_tag_model.remove_all_tags_for_note(note_id)
+            self.__note_tag_model.remove_all_tags_for_note(note_id)
             return True
         except (
             NoteError,
@@ -192,7 +211,7 @@ class NoteTagService:
                 raise e
             tag_id = tag["id"]
             # Remove all notes associated with the tag
-            self.note_tag_model.remove_all_notes_for_tag(tag_id)
+            self.__note_tag_model.remove_all_notes_for_tag(tag_id)
             return True
         except (
             TagError,

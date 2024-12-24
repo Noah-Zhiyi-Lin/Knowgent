@@ -28,10 +28,16 @@ class KnowgentGUI:
         self.current_note = None
 
         # 初始化后端服务
-        self.notebook_service = NotebookService(db, base_path="MyNotebooks")  # 初始化 NotebookService
+        self.notebook_service = NotebookService(db)  # 初始化 NotebookService
         self.note_service = NoteService(db)  # 初始化 NoteService
         self.note_tag_service = NoteTagService(db)  #初始化 NoteTagService
         self.tag_service = TagService(db)  #初始化 TagService
+        
+        # Inject services
+        # self.notebook_service.note_service = self.note_service
+        self.note_service.notebook_service = self.notebook_service
+        self.note_tag_service.note_service = self.note_service
+        self.note_tag_service.tag_service = self.tag_service
         
         self.is_left_frame_visible = False
         # 更新主题配色
@@ -582,6 +588,22 @@ class KnowgentGUI:
             context_menu.add_command(label="Rename Notebook", command=lambda: self.rename_notebook(selected_item))  # 重命名笔记本选项
             context_menu.add_command(label="Delete Notebook", command=lambda: self.delete_notebook(selected_item))  # 删除笔记本选项
         context_menu.post(event.x_root, event.y_root)
+
+    def rename_selected_item(self, event=None):
+        """
+        重命名选中的笔记本或笔记
+        """
+        selected_item = self.tree.selection()
+        if not selected_item:
+            # messagebox.showwarning("No Selection", "Please select a notebook or note to delete.")
+            return
+
+        item_type = self.tree.parent(selected_item[0])  # 判断是笔记本还是笔记
+
+        if item_type:  # 如果是笔记
+            self.rename_note()  # 调用重命名笔记的函数
+        else:  # 如果是笔记本
+            self.rename_notebook(selected_item)  # 调用删除笔记本的函数
 
     def delete_selected_item(self, event=None):
         """
