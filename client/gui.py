@@ -21,7 +21,7 @@ class KnowgentGUI:
         self.text_processor = TextProcessor()
         self.markdown_mode = False
         self.chat_mode=False
-        self.chat=llmagent()
+        self.chat=llmagent(root)
         
         #当前打开的笔记/笔记本
         self.current_notebook = None
@@ -34,7 +34,7 @@ class KnowgentGUI:
         self.tag_service = TagService(db)  #初始化 TagService
         
         # Inject services
-        self.notebook_service.note_service = self.note_service
+        # self.notebook_service.note_service = self.note_service
         self.note_service.notebook_service = self.notebook_service
         self.note_tag_service.note_service = self.note_service
         self.note_tag_service.tag_service = self.tag_service

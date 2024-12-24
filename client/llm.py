@@ -2,15 +2,15 @@ from server.application.services.ollama_service import OllamaService as Ollama
 from server.application.exceptions.ollama import OllamaError
 import tkinter as tk
 from tkinter import ttk
-from tkinter import PhotoImage
+from tkinter import PhotoImage, font as tkfont
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
-
+import math
 import threading
 
 class llmagent:
 
-    def __init__(self):
+    def __init__(self,root):
         self.Ollama = Ollama()
         self.botstate = False
         self.bots=['qwen2.5:0.5b', 'llama3.2:1b', 'nomic-embed-text', 'mxbai-embed-large', ]
@@ -19,9 +19,10 @@ class llmagent:
         self.thumbnail_label=None
         self.style=ttk.Style()
         self.editor_content=None
+        self.root=root
 
-    def create_chat(self,root):
-        self.chat=ttk.Frame(root, style="Custom.TFrame")
+    def create_chat(self, frameroot):
+        self.chat=ttk.Frame(frameroot, style="Custom.TFrame")
         # ================= 聊天显示区域（带滚动条） ================= #
         chat_frame = tk.Frame(self.chat, bg="white")
         chat_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -69,7 +70,7 @@ class llmagent:
                     background='#FFFFFF',
                     arrowcolor='#2C3E50',
                     bordercolor='#FFFFFF',
-                    troughcolor='#2C3E50',
+                    troughcolor='#FFFFFF',
                     relief=tk.FLAT,
                     width=12  # 设置滚动条宽度
                 )
@@ -111,11 +112,7 @@ class llmagent:
             #print("wheeling")
         def on_shift_mouse_wheel(event):
         # 按住Shift时，鼠标滚轮进行水平滚动
-            self.chat_canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        self.chat_canvas.bind_all("<Shift-MouseWheel>", on_shift_mouse_wheel)  # 按住Shift + 滚轮进行水平滚动
-        self.chat_canvas.bind_all("<MouseWheel>", on_mouse_wheel)   # Windows
-        
+            self.chat_canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")        
 
         # 在Canvas上创建一个Frame来容纳消息内容
         self.chat_frame_inner = tk.Frame(self.chat_canvas, bg="white")
@@ -134,6 +131,9 @@ class llmagent:
             pass
 
         self.chat_canvas.bind("<Configure>", resize_message_canvas)
+
+        self.chat_frame_inner.bind("<Shift-MouseWheel>", on_shift_mouse_wheel)  # 按住Shift + 滚轮进行水平滚动
+        self.chat_frame_inner.bind("<MouseWheel>", on_mouse_wheel)   # Windows
 
         # ================= 输入框区域 ================= #
         self.input_frame = tk.Frame(self.chat, bg="#DEDEDE", height=80, highlightbackground='white',highlightthickness=2)
@@ -221,7 +221,7 @@ class llmagent:
         return canvas.create_polygon(points, **kwargs, smooth=True)
 
     # 添加消息的函数
-    def add_message(self, sender, text=None, image_path=None):
+    def add_message(self, sender, msg_text=None, image_path=None):
         """添加消息到聊天窗口"""
         if sender == "user":
             msg_color = "#DCF8C6"  # 浅绿色背景
@@ -235,7 +235,8 @@ class llmagent:
 
         # 使用Canvas绘制圆角矩形
         message_canvas = tk.Canvas(message_frame, bg="white", highlightthickness=0)
-        message_canvas.pack(padx=5,pady=5)
+        message_canvas.pack(padx=5)
+        
 
         if image_path:
             image = Image.open(image_path)
@@ -243,9 +244,50 @@ class llmagent:
             photo = ImageTk.PhotoImage(image)
             self.image_refs.append(photo)
             text_id=message_canvas.create_image(10,10,anchor="nw", image=photo)
+            
         else:
-            max_width = 400  # 最大气泡宽度
-            text_id = message_canvas.create_text(10, 10, anchor="nw", text=text, font=("等线", 12), fill="black", width=max_width)
+            #print(len(msg_text))
+            message_widget = tk.Text(message_canvas, wrap=tk.WORD, height=1, bg=msg_color, fg="black", font=("等线", 12), bd=0)
+            message_widget.insert(tk.END, msg_text)
+            message_widget.config(state="disabled")  # 设置为只读
+            message_widget.pack(anchor="nw", padx=10, pady=5, fill=tk.X)
+
+            # 动态调整高度以适应内容
+            # font = message_widget.cget("font")
+            text_font = tkfont.Font(family="等线", size=12)
+            text_width =text_font.measure(msg_text)//text_font.measure("a")
+            max_chars = 400 // text_font.measure("A")  
+            
+            message_widget.config(width=min(text_width+2,max_chars))
+            
+            lines = ((text_width+2) // max_chars) + 1  # 超过最大宽度会换行
+            text_lines = lines+msg_text.count("\n")+msg_text.count("\r") # 加上显式换行符的行数
+            print(text_lines)
+            print(msg_text.count("\n"))
+            print(msg_text)
+            
+            message_widget.config(height=text_lines)
+            
+            message_widget.update_idletasks()              
+
+            def on_wheel(event):
+                if event.widget.master.master.master:
+                    event.widget.master.master.master.event_generate("<MouseWheel>", delta=event.delta)
+
+            
+            def on_swheel(event):
+                if event.widget.master.master.master:
+                    event.widget.master.master.master.event_generate("<Shift-MouseWheel>", delta=event.delta)
+
+            message_widget.bind("<MouseWheel>", on_wheel)  # 禁用鼠标滚轮
+            message_widget.bind("<Shift-MouseWheel>",on_swheel)      # 禁用键盘向上滚动
+
+
+
+            text_id=message_canvas.create_window(10, 10, anchor="nw", window=message_widget)
+            
+                #max_width = 400  # 最大气泡宽度
+                #text_id = message_canvas.create_text(10, 10, anchor="nw", text=text, font=("等线", 12), fill="black", width=max_width)
 
         # 动态计算文本宽高
         bbox = message_canvas.bbox(text_id)
@@ -262,12 +304,26 @@ class llmagent:
         # 调整Canvas的大小
         message_canvas.config(width=text_width + 10, height=text_height + 10)
 
+        def copy_message():
+            self.root.clipboard_clear()
+            try:
+                self.root.clipboard_append(msg_text)
+            except tk.TclError:
+                pass
+        if not sender == "user":  
+            copy_icon = PhotoImage(file="./client/src/copy.png")
+            copy_button = tk.Button(message_frame, image=copy_icon, bg="white",command=copy_message, relief='flat')
+            copy_button.image = copy_icon
+            copy_button.pack(padx=5,anchor="nw")
+
+        self.chat_canvas.yview_moveto(1.0)
         return message_frame
 
     # 发送消息的函数
     def send_message(self):
         if self.botstate:
             user_text = self.input_entry.get("1.0", "end-1c").strip()
+            #print(len(user_text))
             if not self.image_path and not user_text:
                 return
             if self.image_path:
@@ -285,7 +341,7 @@ class llmagent:
             thread.start()
             
             # 滚动到底部
-            self.chat_canvas.yview_moveto(1.0)
+            
 
     def get_bot_reply(self, user_text, mesg, if_include):
         reply = self.Ollama.chat(self.model_name, user_text, if_include, image_path=self.image_path)
@@ -295,11 +351,10 @@ class llmagent:
         self.add_message("bot", reply)
     
     def create_outline(self, editor_text):
-        
         user_text = editor_text.strip()
         #print(user_text)
         if user_text and self.botstate:
-            input = "Please generate an outline for the following note. Make sure the language of your response is the same as the following note." + user_text
+            input = "Please generate an outline for the following note. Organize your reply in markdown grammar. Make sure the language of your response be the same as the following note.\n\n" + user_text
             mesg=self.add_message("message","Generating outline, please wait...")
             thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg, False))
             thread.start()
@@ -307,7 +362,7 @@ class llmagent:
     def create_tag(self, editor_text):
         user_text = editor_text.strip()
         if user_text and self.botstate:
-            input = "Please generate 2 to 5 tags that can properly describe and classify the following note. Each tag should be put in a seperate line. Make sure the language of your response is the same as the following note." + user_text
+            input = "Please generate 2 to 5 tags that can properly classify the following note into a specific field. Each tag, which is a short noun word or noun phrase without further explanation, should be put in a seperate line. Don't reply anything other than these tags. Don't reply in markdown format. Make sure the language of your response be the same as the following note. Don't add number before tags.\n\n" + user_text
             mesg=self.add_message("message","Generating tags, please wait...")
             thread = threading.Thread(target=self.get_bot_reply, args=(input,mesg, False))
             thread.start()
