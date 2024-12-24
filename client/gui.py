@@ -223,6 +223,8 @@ class KnowgentGUI:
         if hasattr(self, 'preview_frame'):
             self.preview_frame.configure(style='Custom.TFrame')
 
+        
+
     def change_theme(self, theme_name):
         """切换主题"""
         if theme_name in self.themes:
@@ -987,5 +989,20 @@ class KnowgentGUI:
         self.chat_mode = not self.chat_mode
         if self.chat_mode:
             self.paned_window.add(self.chat_window,weight=5) # 显示左侧窗口
+
         else:
             self.paned_window.remove(self.chat_window) # 隐藏左侧窗口
+
+
+        """切换Markdown预览模式"""
+        self.markdown_mode = not self.markdown_mode
+        
+        if self.markdown_mode:
+            # 启用预览模式
+            self.markdown_button.configure(text="Hide")
+            self.paned_window.add(self.preview_frame,weight=9)  # 添加预览窗口
+            self.update_preview()  # 更新预览内容
+        else:
+            # 禁用预览模式
+            self.markdown_button.configure(text="Preview")
+            self.paned_window.remove(self.preview_frame)  # 移除预览窗口
