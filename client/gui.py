@@ -223,6 +223,8 @@ class KnowgentGUI:
         if hasattr(self, 'preview_frame'):
             self.preview_frame.configure(style='Custom.TFrame')
 
+        
+
     def change_theme(self, theme_name):
         """切换主题"""
         if theme_name in self.themes:
