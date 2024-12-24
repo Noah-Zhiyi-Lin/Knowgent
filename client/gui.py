@@ -21,7 +21,7 @@ class KnowgentGUI:
         self.text_processor = TextProcessor()
         self.markdown_mode = False
         self.chat_mode=False
-        self.chat=llmagent()
+        self.chat=llmagent(root)
         
         #当前打开的笔记/笔记本
         self.current_notebook = None
